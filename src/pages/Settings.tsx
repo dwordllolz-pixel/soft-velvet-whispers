@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Brain, Loader2, ShieldAlert, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseEnv } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useChatHistory } from "@/hooks/useChatHistory";
@@ -70,12 +70,12 @@ const Settings = () => {
     try {
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      const url = `${supabaseEnv.url}/functions/v1/chat`;
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token ?? supabaseEnv.anonKey}`,
         },
         body: JSON.stringify({
           messages: [
