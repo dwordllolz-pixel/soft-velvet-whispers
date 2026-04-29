@@ -80,6 +80,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_invite_redemptions: {
+        Row: {
+          code_hash: string
+          granted_role: Database["public"]["Enums"]["app_role"] | null
+          id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          granted_role?: Database["public"]["Enums"]["app_role"] | null
+          id?: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          granted_role?: Database["public"]["Enums"]["app_role"] | null
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_invites: {
         Row: {
           code_hash: string
