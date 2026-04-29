@@ -6,7 +6,7 @@ import { getCharacter, getASMRCategory, type ASMRType } from "@/data/characters"
 import { useTTS } from "@/hooks/useTTS";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseEnv } from "@/integrations/supabase/client";
 import type { Emotion } from "@/data/emotionMatrix";
 import type { NsfwLevel, CharacterState, ProfileData } from "@/types/profile";
 import {
@@ -168,7 +168,7 @@ const clearEcho = (
   setMessages((prev) => prev.filter((m) => m.role !== "system"));
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const CHAT_URL = `${supabaseEnv.url}/functions/v1/chat`;
 
 const TIER_CYCLE: NsfwLevel[] = ["sfw", "suggestive", "explicit"];
 
@@ -534,7 +534,7 @@ FORMATTING:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${accessToken ?? supabaseEnv.anonKey}`,
       },
       body: JSON.stringify({
         messages: apiMessages,
@@ -676,13 +676,13 @@ FORMATTING:
 
     try {
       const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/classify-emotion`,
+        `${supabaseEnv.url}/functions/v1/classify-emotion`,
         {
           method: "POST",
           signal: controller.signal,
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${accessToken ?? supabaseEnv.anonKey}`,
           },
           body: JSON.stringify({ message: normalized }),
         },
