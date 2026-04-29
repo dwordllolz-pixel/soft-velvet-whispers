@@ -34,17 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        // Auto sign-in as guest so TTS / chat / relationships always have a user id.
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) {
-          console.error("Anonymous sign-in failed:", error);
-          setLoading(false);
-          return;
-        }
-        setSession(data.session);
-        setUser(data.user);
-      } else {
+      if (session) {
         setSession(session);
         setUser(session.user);
       }
