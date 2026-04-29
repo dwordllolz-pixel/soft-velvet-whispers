@@ -183,11 +183,11 @@ serve(async (req) => {
     try {
       const prefPrompt = `Identify 0–2 stable user behavioral preferences emerging from this conversation. A preference is HOW the user likes to be related to (e.g. "responds well to brief, grounded reassurance", "prefers being teased gently before being praised"). NOT topics, NOT events. Each preference: one short sentence, no names, no nouns describing topics. If nothing clear emerges, return an empty array.`;
 
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: prefPrompt },
             { role: "user", content: dialogue },
