@@ -27,28 +27,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (_event === "SIGNED_IN") {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
+
+    const cleanAuthHash = () => {
+      if (window.location.hash.includes("access_token")) {
         window.history.replaceState({}, document.title, window.location.pathname);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+      }
+    };
+
+    const applySession = (nextSession: Session | null) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      applySession(session);
+      if (session) cleanAuthHash();
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      applySession(session);
+      if (event === "SIGNED_IN" && session) {
+        cleanAuthHash();
       }
       setLoading(false);
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
