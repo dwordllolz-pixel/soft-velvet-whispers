@@ -11,6 +11,7 @@ import Chat from "./pages/Chat.tsx";
 import Auth from "./pages/Auth.tsx";
 import History from "./pages/History.tsx";
 import Settings from "./pages/Settings.tsx";
+import AdminDebug from "./pages/AdminDebug.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/history" element={<History />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/admin-debug" element={<AdminDebug />} />
               <Route path="/character/:id" element={<CharacterProfile />} />
               <Route path="/chat/:characterId/:asmrType" element={<Chat />} />
               <Route path="/chat/:characterId" element={<Chat />} />

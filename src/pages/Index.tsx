@@ -4,9 +4,10 @@ import { motion } from "framer-motion";
 import { characters, asmrtCategories, type ASMRType } from "@/data/characters";
 import CharacterCard from "@/components/CharacterCard";
 import CategoryFilter from "@/components/CategoryFilter";
-import { Headphones, User, LogOut, Heart, Clock, Settings as SettingsIcon } from "lucide-react";
+import { Bug, Headphones, User, LogOut, Heart, Clock, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useAdminDebug } from "@/hooks/useAdminDebug";
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<ASMRType | null>(null);
@@ -14,6 +15,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { favoriteIds, toggleFavorite } = useFavorites();
+  const { canDebug } = useAdminDebug();
 
   const filteredCharacters = characters.filter((c) => {
     if (selectedCategory && !c.asmrtSpecialties.includes(selectedCategory)) return false;
@@ -54,6 +56,15 @@ const Index = () => {
               >
                 <SettingsIcon className="h-4 w-4" />
               </button>
+              {canDebug && (
+                <button
+                  onClick={() => navigate("/admin-debug")}
+                  className="h-8 w-8 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Admin debug console"
+                >
+                  <Bug className="h-4 w-4" />
+                </button>
+              )}
               <button
                 onClick={signOut}
                 className="h-8 w-8 rounded-full glass flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
