@@ -101,10 +101,6 @@ export function useAdminDebug() {
   const isDebugger = roles.includes("debugger");
   const canDebug = isAdmin || isDebugger;
 
-  const requireDebugAccess = useCallback(() => {
-    if (!canDebug) throw new Error("Insufficient privileges");
-  }, [canDebug]);
-
   const redeemInvite = useCallback(async (code: string) => {
     if (!user) throw new Error("Sign in before redeeming an admin invite.");
     const code_hash = await sha256(code);
@@ -115,7 +111,7 @@ export function useAdminDebug() {
 
   const createInvite = useCallback(async (role: AdminRole = "debugger", description = "Debug invite") => {
     if (!user) throw new Error("Sign in before creating an invite.");
-    requireDebugAccess();
+    if (!canDebug) throw new Error("Insufficient privileges");
     const code = makeInviteCode();
     const code_hash = await sha256(code);
     const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
@@ -129,10 +125,10 @@ export function useAdminDebug() {
     });
     if (error) throw error;
     return code;
-  }, [requireDebugAccess, user]);
+  }, [canDebug, user]);
 
   const loadDashboard = useCallback(async () => {
-    requireDebugAccess();
+    if (!canDebug) throw new Error("Insufficient privileges");
     const [usersRes, sessionsRes, messagesRes, echoRes, analyticsRes, auditRes] = await Promise.all([
       supabase.from("users").select("id, profile_data, last_active_character, updated_at").order("updated_at", { ascending: false }).limit(50),
       supabase.from("chat_sessions").select("id, user_id, character_id, asmr_type, title, updated_at").order("updated_at", { ascending: false }).limit(50),
@@ -153,11 +149,11 @@ export function useAdminDebug() {
       analytics: (analyticsRes.data ?? []) as AnalyticsEvent[],
       audit: (auditRes.data ?? []) as AuditLog[],
     };
-  }, [requireDebugAccess]);
+  }, [canDebug]);
 
   const updateCharacterState = useCallback(async (targetUserId: string, characterId: string, patch: Partial<CharacterState>) => {
     if (!user) throw new Error("Sign in before editing debug state.");
-    requireDebugAccess();
+    if (!canDebug) throw new Error("Insufficient privileges");
     const { data, error } = await supabase.from("users").select("profile_data").eq("id", targetUserId).single();
     if (error) throw error;
     const profile = migrateProfileData((data as any).profile_data);
@@ -178,13 +174,13 @@ export function useAdminDebug() {
       after_value: nextState as any,
     });
     return nextState;
-  }, [requireDebugAccess, user]);
+  }, [canDebug, user]);
 
   const recordAnalyticsEvent = useCallback(async (event_name: string, character_id?: string, mode?: string, metadata: Record<string, unknown> = {}) => {
     if (!user) return;
-    requireDebugAccess();
+    if (!canDebug) throw new Error("Insufficient privileges");
     await supabase.from("admin_analytics_events").insert({ user_id: user.id, event_name, character_id, mode, metadata });
-  }, [requireDebugAccess, user]);
+  }, [canDebug, user]);
 
   return useMemo(() => ({
     roles,
