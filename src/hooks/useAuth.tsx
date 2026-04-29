@@ -28,8 +28,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      if (_event === "SIGNED_IN") {
+        setSession(session);
+        setUser(session?.user ?? null);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
     });
 
@@ -37,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session) {
         setSession(session);
         setUser(session.user);
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
       setLoading(false);
     });
