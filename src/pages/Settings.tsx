@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Brain, Loader2, ShieldAlert, Trash2 } from "lucide-react";
+import { ArrowLeft, Brain, KeyRound, Loader2, ShieldAlert, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase, supabaseEnv } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -244,6 +244,9 @@ const Settings = () => {
             Account
           </h2>
           <p className="text-sm">{user?.email ?? "Guest session"}</p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/admin-debug")}>
+            <KeyRound className="h-4 w-4" /> Admin invite code
+          </Button>
           <Button variant="outline" size="sm" onClick={signOut}>
             Sign out
           </Button>
