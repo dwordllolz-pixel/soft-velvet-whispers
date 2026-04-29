@@ -60,19 +60,19 @@ serve(async (req) => {
       .map((m) => `${m.role === "user" ? "USER" : "HIM"}: ${m.content.trim()}`)
       .join("\n");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
 
     // ---- Layer 1: Narrative state (rewrite) ----
     const narrativePrompt = `Summarize the emotional texture of this conversation in 2–3 sentences. Focus on how the interaction felt, not what was discussed. Avoid concrete nouns unless they describe emotional behavior. Do not mention specific topics, events, or facts. If you find yourself writing a noun that refers to a topic rather than an emotion, rewrite it. Return only the summary. No preamble.`;
 
     let narrativeState = "";
     try {
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: narrativePrompt },
             { role: "user", content: dialogue },
