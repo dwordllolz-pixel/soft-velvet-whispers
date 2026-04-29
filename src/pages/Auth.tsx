@@ -48,12 +48,19 @@ const Auth = () => {
   };
 
   const handleGoogleAuth = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin },
     });
     if (error) {
-      toast.error("Google sign-in failed");
+      const providerDisabled = error.message.toLowerCase().includes("unsupported provider");
+      toast.error(
+        providerDisabled
+          ? "Google sign-in is not enabled in Supabase yet. Enable Google under Authentication → Providers."
+          : error.message || "Google sign-in failed",
+      );
+      setLoading(false);
     }
   };
 
@@ -83,6 +90,7 @@ const Auth = () => {
           {/* Google */}
           <button
             onClick={handleGoogleAuth}
+            disabled={loading}
             className="w-full glass rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:bg-white/10 transition-colors mb-4"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
