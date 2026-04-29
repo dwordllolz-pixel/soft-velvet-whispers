@@ -8,6 +8,11 @@ const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
   import.meta.env.SUPABASE_ANON_KEY;
 
+export const supabaseEnv = {
+  url: SUPABASE_URL,
+  anonKey: SUPABASE_PUBLISHABLE_KEY,
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
