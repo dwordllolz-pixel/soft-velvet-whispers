@@ -4,7 +4,7 @@
  * Fetch + inject for character mode, 5 main characters only.
  * All failures are swallowed — chat must never block on memory.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseEnv } from "@/integrations/supabase/client";
 
 export const MEMORY_CHARACTERS = new Set([
   "marcus",
@@ -167,7 +167,7 @@ async function pickRelevantMilestone(
   const t = setTimeout(() => controller.abort(), 1500);
   try {
     const resp = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pick-milestone`,
+      `${supabaseEnv.url}/functions/v1/pick-milestone`,
       {
         method: "POST",
         signal: controller.signal,
@@ -286,7 +286,7 @@ export function fireSummarization(opts: {
         return;
       }
       const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-memory`,
+        `${supabaseEnv.url}/functions/v1/summarize-memory`,
         {
           method: "POST",
           headers: {
