@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { extractDialogueText, splitIntoSentences } from "@/lib/ttsUtils";
 import { detectAndStripAsmrSounds } from "@/lib/asmrDetect";
 import { getAsmrSoundFile } from "@/data/asmrSounds";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseEnv } from "@/integrations/supabase/client";
 import { getCharacterVoice, EMOTION_PARAMS, type EmotionParams } from "@/data/voiceArchetypes";
 import { blendParams, type Emotion, type RelationshipLevel } from "@/data/emotionMatrix";
 
@@ -171,7 +171,7 @@ export function useTTS(characterId: string) {
         : EMOTION_PARAMS[voice.archetype];
 
       const sentences = splitIntoSentences(fullText);
-      const ttsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chatterbox-tts`;
+      const ttsUrl = `${supabaseEnv.url}/functions/v1/chatterbox-tts`;
 
       // Build local jobs array first — playback loop reads via jobsRef, not React state.
       const jobs: TTSJob[] = sentences.map((text, index) => ({
