@@ -708,6 +708,29 @@ FORMATTING:
     }
   };
 
+  const recordEchoLog = async (message: string, echoType: EchoType, userId: string | null) => {
+    if (!userId || profile.preferences.incognito) return;
+    await supabase.from("echo_logs").insert({
+      user_id: userId,
+      character_id: characterId ?? null,
+      mode: chatMode,
+      message,
+      echo_type: echoType,
+      severity: echoType === "error" ? "error" : echoType === "rate_limit" ? "warning" : "info",
+    });
+  };
+
+  const recordAnalytics = async (eventName: string, userId: string | null, metadata: Record<string, unknown> = {}) => {
+    if (!userId || profile.preferences.incognito) return;
+    await supabase.from("admin_analytics_events").insert({
+      user_id: userId,
+      event_name: eventName,
+      character_id: characterId ?? null,
+      mode: chatMode,
+      metadata,
+    });
+  };
+
   const sendMessage = async (userText: string, options?: { regenerate?: boolean }) => {
     if (!userText.trim() || isLoading || inFlightRef.current) return;
     inFlightRef.current = true;
@@ -815,6 +838,7 @@ FORMATTING:
     const TIMEOUT_MS = 7000;
     const slowTimer = window.setTimeout(() => {
       pushEcho(setMessages, "Response delayed…", "timeout");
+      void recordEchoLog("Response delayed…", "timeout", userIdLocal);
     }, TIMEOUT_MS);
 
     // Character mode: collect the full response off-screen, then parse JSON
@@ -848,8 +872,10 @@ FORMATTING:
         const status = (lastError as { status?: number })?.status;
         if (status === 429) {
           pushEcho(setMessages, "Too many requests. Wait a moment.", "rate_limit");
+          void recordEchoLog("Too many requests. Wait a moment.", "rate_limit", userIdLocal);
         } else {
           pushEcho(setMessages, "Connection unstable. Try again.", "error");
+          void recordEchoLog("Connection unstable. Try again.", "error", userIdLocal);
         }
         return;
       }
@@ -928,6 +954,13 @@ FORMATTING:
           ...prev,
         ].slice(0, 10));
       }
+
+      void recordAnalytics("chat_exchange_completed", userIdLocal, {
+        regenerated: isRegenerate,
+        asmrType: asmrType ?? null,
+        emotion: result.emotion,
+        intensity: result.intensity,
+      });
 
       // Phase 3+ — axes driven SOLELY by the user-message classifier.
       // Conflict / jealousy_trigger / vulnerability bypass MIN_EVENT_WEIGHT
