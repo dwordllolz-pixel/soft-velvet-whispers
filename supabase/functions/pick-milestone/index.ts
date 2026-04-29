@@ -15,8 +15,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ index: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -26,11 +26,11 @@ serve(async (req) => {
       .map((m, i) => `${i}. ${m}`)
       .join("\n");
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "Given a user message, return only the index number of the most emotionally relevant memory. Output a single integer and nothing else." },
           { role: "user", content: `MESSAGE: ${message}\n\nMEMORIES:\n${list}` },
