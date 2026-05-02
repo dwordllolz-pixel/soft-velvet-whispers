@@ -149,6 +149,57 @@ export type Database = {
         }
         Relationships: []
       }
+      character_memories: {
+        Row: {
+          character_id: string
+          content: string
+          created_at: string | null
+          id: string
+          importance: number | null
+          user_id: string | null
+        }
+        Insert: {
+          character_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          importance?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          character_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          importance?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      character_relationships: {
+        Row: {
+          character_id: string
+          last_interaction: string | null
+          stage: string | null
+          trust_score: number | null
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          last_interaction?: string | null
+          stage?: string | null
+          trust_score?: number | null
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          last_interaction?: string | null
+          stage?: string | null
+          trust_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -280,6 +331,30 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      session_state: {
+        Row: {
+          character_id: string
+          last_emotion: string | null
+          message_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          last_emotion?: string | null
+          message_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          last_emotion?: string | null
+          message_count?: number | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
