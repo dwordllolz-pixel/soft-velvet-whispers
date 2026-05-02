@@ -786,13 +786,15 @@ FORMATTING:
       return;
     }
 
-    let { data: sessionData } = await supabase.auth.getSession();
-    let accessToken = sessionData.session?.access_token;
-    let userIdLocal = sessionData.session?.user?.id ?? null;
-    if (!accessToken) {
-      const { data } = await supabase.auth.signInAnonymously();
-      accessToken = data.session?.access_token;
-      userIdLocal = data.session?.user?.id ?? userIdLocal;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    const userIdLocal = sessionData.session?.user?.id ?? null;
+    if (!accessToken || !userIdLocal) {
+      console.warn("[chat] sign-in required to send messages");
+      setIsLoading(false);
+      inFlightRef.current = false;
+      window.location.href = "/auth";
+      return;
     }
 
     // Phase 4 — Memory: fetch bundle for the 5 main characters in character mode.
