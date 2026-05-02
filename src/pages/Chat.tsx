@@ -790,14 +790,10 @@ FORMATTING:
     const accessToken = sessionData.session?.access_token;
     const userIdLocal = sessionData.session?.user?.id ?? null;
     if (!accessToken || !userIdLocal) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to chat.",
-        variant: "destructive",
-      });
+      console.warn("[chat] sign-in required to send messages");
       setIsLoading(false);
       inFlightRef.current = false;
-      navigate("/auth");
+      window.location.href = "/auth";
       return;
     }
 
