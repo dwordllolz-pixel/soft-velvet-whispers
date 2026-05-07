@@ -88,9 +88,20 @@ export function useAdminDebug() {
       return;
     }
     setLoadingRoles(true);
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-    setRoles(((data ?? []).map((r: any) => r.role).filter(Boolean)) as AdminRole[]);
-    setLoadingRoles(false);
+    try {
+      const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      if (error) {
+        console.warn("User roles fetch failed:", error.message, "— continuing without roles");
+        setRoles([]);
+      } else {
+        setRoles(((data ?? []).map((r: any) => r.role).filter(Boolean)) as AdminRole[]);
+      }
+    } catch (err) {
+      console.warn("User roles fetch failed:", err, "— continuing without roles");
+      setRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
   }, [user]);
 
   useEffect(() => {
