@@ -177,7 +177,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: finalSystemPrompt + relationshipBlock + `\n\nAfter your reply, you MUST call the tag_emotion tool exactly once with the dominant emotion of your reply and an intensity from 1 (subtle) to 5 (overwhelming).` },
+          { role: "system", content: finalSystemPrompt + serverOverrideBlock + relationshipBlock + `\n\nAfter your reply, you MUST call the tag_emotion tool exactly once with the dominant emotion of your reply and an intensity from 1 (subtle) to 5 (overwhelming).` },
           ...sanitizedMessages,
         ],
         stream: true,
