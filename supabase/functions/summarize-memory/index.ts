@@ -54,11 +54,14 @@ serve(async (req) => {
       });
     }
 
-    const dialogue = (messages as Msg[])
+    const MAX_MSG_CHARS = 2000;
+    const MAX_DIALOGUE_CHARS = 20000;
+    let dialogue = (messages as Msg[])
       .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
       .slice(-10)
-      .map((m) => `${m.role === "user" ? "USER" : "HIM"}: ${m.content.trim()}`)
+      .map((m) => `${m.role === "user" ? "USER" : "HIM"}: ${m.content.trim().slice(0, MAX_MSG_CHARS)}`)
       .join("\n");
+    if (dialogue.length > MAX_DIALOGUE_CHARS) dialogue = dialogue.slice(0, MAX_DIALOGUE_CHARS);
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
