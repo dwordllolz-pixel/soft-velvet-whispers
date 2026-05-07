@@ -37,8 +37,22 @@ serve(async (req) => {
   }
 
   try {
-    const { message, memories } = await req.json();
-    if (typeof message !== "string" || !Array.isArray(memories) || memories.length === 0) {
+    const { message: rawMessage, memories: rawMemories } = await req.json();
+    if (typeof rawMessage !== "string" || !Array.isArray(rawMemories) || rawMemories.length === 0) {
+      return new Response(JSON.stringify({ index: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Cost-amplification guard: cap input sizes before they reach OpenAI.
+    const MAX_MESSAGE_CHARS = 2000;
+    const MAX_MEMORY_ITEMS = 20;
+    const MAX_MEMORY_CHARS = 1000;
+    const message = rawMessage.slice(0, MAX_MESSAGE_CHARS);
+    const memories = (rawMemories as unknown[])
+      .slice(0, MAX_MEMORY_ITEMS)
+      .map((m) => (typeof m === "string" ? m.slice(0, MAX_MEMORY_CHARS) : ""))
+      .filter((m) => m.length > 0);
+    if (memories.length === 0) {
       return new Response(JSON.stringify({ index: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
