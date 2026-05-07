@@ -74,40 +74,52 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase
-      .from("users")
-      .select("profile_data")
-      .eq("id", user.id)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("profile_data")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    if (error) {
-      console.warn("[useUserProfile] load failed:", error.message);
+      if (error) {
+        console.warn("User profile fetch failed:", error.message, "— using defaults");
+        profileRef.current = DEFAULT_PROFILE;
+        setProfile(DEFAULT_PROFILE);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        // Row missing — try to create it, but fall back to defaults if blocked
+        try {
+          const { data: created } = await supabase
+            .from("users")
+            .insert({ id: user.id })
+            .select("profile_data")
+            .maybeSingle();
+          const migrated = migrateProfileData(created?.profile_data);
+          profileRef.current = migrated;
+          setProfile(migrated);
+        } catch (insertErr) {
+          console.warn("User profile create failed, using defaults:", insertErr);
+          profileRef.current = DEFAULT_PROFILE;
+          setProfile(DEFAULT_PROFILE);
+        }
+      } else {
+        const migrated = migrateProfileData(data.profile_data);
+        profileRef.current = migrated;
+        setProfile(migrated);
+        if (JSON.stringify(migrated) !== JSON.stringify(data.profile_data)) {
+          void writeBack(migrated);
+        }
+      }
+    } catch (err) {
+      console.warn("User profile fetch failed:", err, "— using defaults");
       profileRef.current = DEFAULT_PROFILE;
       setProfile(DEFAULT_PROFILE);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (!data) {
-      // Row missing (signup trigger may not have fired for legacy users) — create it
-      const { data: created } = await supabase
-        .from("users")
-        .insert({ id: user.id })
-        .select("profile_data")
-        .maybeSingle();
-      const migrated = migrateProfileData(created?.profile_data);
-      profileRef.current = migrated;
-      setProfile(migrated);
-    } else {
-      const migrated = migrateProfileData(data.profile_data);
-      profileRef.current = migrated;
-      setProfile(migrated);
-      // Persist the migrated shape back if it was upgraded
-      if (JSON.stringify(migrated) !== JSON.stringify(data.profile_data)) {
-        void writeBack(migrated);
-      }
-    }
-    setLoading(false);
   }, [user, writeBack]);
 
   useEffect(() => {
