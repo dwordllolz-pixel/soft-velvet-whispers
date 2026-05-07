@@ -13,14 +13,25 @@ export function useFavorites() {
       return;
     }
     setLoading(true);
-    supabase
-      .from("favorites")
-      .select("character_id")
-      .eq("user_id", user.id)
-      .then(({ data }) => {
-        setFavoriteIds(new Set((data ?? []).map((f: any) => f.character_id)));
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("favorites")
+          .select("character_id")
+          .eq("user_id", user.id);
+        if (error) {
+          console.warn("Favorites fetch failed:", error.message);
+          setFavoriteIds(new Set());
+        } else {
+          setFavoriteIds(new Set((data ?? []).map((f: any) => f.character_id)));
+        }
+      } catch (err) {
+        console.warn("Favorites fetch failed:", err);
+        setFavoriteIds(new Set());
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   }, [user]);
 
   const toggleFavorite = useCallback(
@@ -35,10 +46,14 @@ export function useFavorites() {
         return next;
       });
 
-      if (isFav) {
-        await supabase.from("favorites").delete().eq("user_id", user.id).eq("character_id", characterId);
-      } else {
-        await supabase.from("favorites").insert({ user_id: user.id, character_id: characterId });
+      try {
+        if (isFav) {
+          await supabase.from("favorites").delete().eq("user_id", user.id).eq("character_id", characterId);
+        } else {
+          await supabase.from("favorites").insert({ user_id: user.id, character_id: characterId });
+        }
+      } catch (err) {
+        console.warn("Favorites toggle failed:", err);
       }
     },
     [user, favoriteIds]
