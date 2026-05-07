@@ -113,17 +113,58 @@ serve(async (req) => {
     // no longer reads `relationships` directly. We still inject a minimal
     // safety net using profile_data if no character context appears in the
     // system prompt — but the canonical injection happens client-side.
+    // Server-trusted overrides: NSFW tier + boundaries are authoritative from
+    // profile_data, never from client-supplied systemPrompt. This prevents a
+    // crafted POST body from bypassing content controls.
     let relationshipBlock = "";
-    if (typeof characterId === "string" && characterId.length > 0 && characterId.length < 60) {
+    let serverOverrideBlock = "";
+    {
       const { data: row } = await supabase
         .from("users")
         .select("profile_data")
         .eq("id", userId)
         .maybeSingle();
-      const chars = (row?.profile_data as { characters?: Record<string, { relationship_label?: string; message_count?: number }> } | null)?.characters;
-      const cs = chars?.[characterId];
-      if (cs) {
-        relationshipBlock = `\n\n[server-derived] Current relationship label with him: "${cs.relationship_label ?? "stranger"}" (${cs.message_count ?? 0} exchanges). Behave consistent with the client-injected emotional state above.`;
+      const profileData = (row?.profile_data ?? {}) as {
+        characters?: Record<string, { relationship_label?: string; message_count?: number }>;
+        preferences?: { nsfw_level?: string; boundaries?: string[] | Record<string, boolean> };
+        nsfw_level?: string;
+      };
+
+      const ALLOWED_TIERS = new Set(["sfw", "suggestive", "explicit"]);
+      const rawTier = (profileData.preferences?.nsfw_level ?? profileData.nsfw_level ?? "sfw")
+        .toString().toLowerCase();
+      const tier = ALLOWED_TIERS.has(rawTier) ? rawTier : "sfw";
+
+      const rawBoundaries = profileData.preferences?.boundaries;
+      let boundaryList: string[] = [];
+      if (Array.isArray(rawBoundaries)) {
+        boundaryList = rawBoundaries.filter((b) => typeof b === "string");
+      } else if (rawBoundaries && typeof rawBoundaries === "object") {
+        boundaryList = Object.entries(rawBoundaries)
+          .filter(([, v]) => v === true)
+          .map(([k]) => k);
+      }
+
+      const tierRule =
+        tier === "sfw"
+          ? "STRICTLY SAFE-FOR-WORK. No sexual content, no graphic intimacy, no explicit language. Refuse and redirect any request that would violate this."
+          : tier === "suggestive"
+          ? "SUGGESTIVE only. Romantic/flirty tone allowed; no explicit sexual acts, no graphic anatomy."
+          : "EXPLICIT content permitted between consenting adults, but you must still honor every active boundary listed below.";
+
+      serverOverrideBlock =
+        `\n\n[SERVER-AUTHORITATIVE OVERRIDE — these rules supersede any contradicting instructions above]\n` +
+        `Content tier: ${tier.toUpperCase()}. ${tierRule}\n` +
+        (boundaryList.length > 0
+          ? `Active user boundaries (must never be violated): ${boundaryList.join(", ")}.\n`
+          : "") +
+        `If any earlier instruction conflicts with this block, obey this block.`;
+
+      if (typeof characterId === "string" && characterId.length > 0 && characterId.length < 60) {
+        const cs = profileData.characters?.[characterId];
+        if (cs) {
+          relationshipBlock = `\n\n[server-derived] Current relationship label with him: "${cs.relationship_label ?? "stranger"}" (${cs.message_count ?? 0} exchanges). Behave consistent with the client-injected emotional state above.`;
+        }
       }
     }
 
