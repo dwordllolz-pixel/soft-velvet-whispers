@@ -33,6 +33,15 @@ function buildSSML(text: string, voice: string, rate: string, pitch: string): st
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (!TRUSTED_TOKEN) {
+    console.error("EDGE_TTS_TRUSTED_TOKEN is not configured");
+    return new Response(JSON.stringify({ error: "Server not configured" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const WSS_BASE = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_TOKEN}`;
+
   // Auth guard — require a valid (non-anonymous) Supabase user
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
