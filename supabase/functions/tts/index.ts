@@ -7,8 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const TRUSTED_TOKEN = Deno.env.get("EDGE_TTS_TRUSTED_TOKEN") ?? "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
-const WSS_BASE = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_TOKEN}`;
+const TRUSTED_TOKEN = Deno.env.get("EDGE_TTS_TRUSTED_TOKEN");
 const OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3";
 
 function escapeXml(text: string): string {
@@ -33,6 +32,15 @@ function buildSSML(text: string, voice: string, rate: string, pitch: string): st
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  if (!TRUSTED_TOKEN) {
+    console.error("EDGE_TTS_TRUSTED_TOKEN is not configured");
+    return new Response(JSON.stringify({ error: "Server not configured" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const WSS_BASE = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_TOKEN}`;
 
   // Auth guard — require a valid (non-anonymous) Supabase user
   const authHeader = req.headers.get("Authorization");
