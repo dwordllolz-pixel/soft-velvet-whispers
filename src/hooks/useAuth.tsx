@@ -57,10 +57,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await supabase.auth.getSession();
         if (!data.session) {
-          await supabase.auth.signInAnonymously();
+          console.log("[auth] no session — calling signInAnonymously()");
+          const result = await supabase.auth.signInAnonymously();
+          console.log("[auth] signInAnonymously result:", {
+            user: result.data?.user?.id,
+            session: !!result.data?.session,
+            error: result.error,
+          });
+        } else {
+          console.log("[auth] session already present, skipping anon sign-in");
         }
       } catch (err) {
-        console.warn("[auth] anonymous sign-in failed:", err);
+        console.warn("[auth] anonymous sign-in threw:", err);
       }
     };
 
@@ -71,18 +79,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log("[auth] startup getSession():", {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        isAnonymous: (session?.user as any)?.is_anonymous,
+      });
       if (!session) {
         await ensureAnonymousSession();
         const { data } = await supabase.auth.getSession();
         applySession(data.session);
+        console.log("[auth] post-anon final state:", {
+          hasSession: !!data.session,
+          userId: data.session?.user?.id,
+          isAnonymous: (data.session?.user as any)?.is_anonymous,
+        });
       } else {
         applySession(session);
         cleanAuthHash();
+        console.log("[auth] startup final state:", {
+          hasSession: true,
+          userId: session.user?.id,
+          isAnonymous: (session.user as any)?.is_anonymous,
+        });
       }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[auth] onAuthStateChange:", event, {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        isAnonymous: (session?.user as any)?.is_anonymous,
+      });
       applySession(session);
       if (event === "SIGNED_IN" && session) {
         cleanAuthHash();
