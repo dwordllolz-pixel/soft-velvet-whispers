@@ -793,7 +793,7 @@ FORMATTING:
       console.warn("[chat] sign-in required to send messages");
       setIsLoading(false);
       inFlightRef.current = false;
-      window.location.href = "/auth";
+      window.location.hash = "#/auth";
       return;
     }
 
