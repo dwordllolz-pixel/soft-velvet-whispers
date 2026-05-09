@@ -70,9 +70,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(nextSession?.user ?? null);
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
-      if (session) cleanAuthHash();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        await ensureAnonymousSession();
+        const { data } = await supabase.auth.getSession();
+        applySession(data.session);
+      } else {
+        applySession(session);
+        cleanAuthHash();
+      }
       setLoading(false);
     });
 
