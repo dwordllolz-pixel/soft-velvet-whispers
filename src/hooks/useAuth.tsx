@@ -30,9 +30,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let mounted = true;
 
     const cleanAuthHash = () => {
-      if (window.location.hash.includes("access_token")) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+      const hash = window.location.hash;
+      if (!hash.includes("access_token") && !hash.includes("refresh_token")) return;
+      // With HashRouter, the route lives in the hash (e.g. "#/chat/eli").
+      // Supabase appends auth tokens after a "#" too, which can produce either
+      // "#access_token=..." (no route) or "#/route#access_token=..." / "#/route&access_token=...".
+      // Preserve the route portion and strip only the auth params.
+      let routePart = "";
+      const routeMatch = hash.match(/^#(\/[^#&]*)/);
+      if (routeMatch) routePart = routeMatch[1];
+      const newUrl =
+        window.location.pathname + window.location.search + (routePart ? `#${routePart}` : "");
+      window.history.replaceState({}, document.title, newUrl);
     };
 
     const applySession = (nextSession: Session | null) => {
