@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const cleanAuthHash = () => {
       const hash = window.location.hash;
 
+      // Ignore normal hash routes
       if (
         !hash.includes("access_token") &&
         !hash.includes("refresh_token")
@@ -39,14 +40,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Preserve HashRouter route
-      const routeMatch = hash.match(/^#(\/[^#&]*)/);
+      // Preserve the HashRouter route
+      // Example: #/chat/eli#access_token=... -> /chat/eli
+      const routeMatch = hash.match(/^#(\/[^#&?]*)/);
       const routePart = routeMatch ? routeMatch[1] : "";
 
       const newUrl =
-        window.location.pathname + window.location.search + (routePart ? `#${routePart}` : "");
+        window.location.pathname +
+        window.location.search +
+        (routePart ? `#${routePart}` : "");
 
       window.history.replaceState({}, document.title, newUrl);
+    };
+
+    const ensureAnonymousSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          await supabase.auth.signInAnonymously();
+        }
+      } catch (err) {
+        console.warn("[auth] anonymous sign-in failed:", err);
+      }
     };
 
     const applySession = (nextSession: Session | null) => {
