@@ -118,7 +118,10 @@ serve(async (req) => {
       const data = await resp.json();
       const rawOut = (data?.choices?.[0]?.message?.content ?? "").toString().trim().toLowerCase();
       console.log("[classify-emotion] raw output:", JSON.stringify(rawOut));
-      const cleaned = rawOut.replace(/[^a-z_]/g, "");
+      const cleaned = rawOut
+        .split(/\s+/)[0]
+        .trim()
+        .replace(/[^a-z_]/g, "");
       if ((VALID_CATEGORIES as readonly string[]).includes(cleaned)) {
         return { category: cleaned as Category, reason: "llm" };
       }

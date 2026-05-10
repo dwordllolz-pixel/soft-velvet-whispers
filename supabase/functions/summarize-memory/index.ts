@@ -40,6 +40,21 @@ serve(async (req) => {
     }
     const userId = userData.user.id;
 
+    const contentLength = Number(req.headers.get("content-length") || 0);
+
+    if (contentLength > 100_000) {
+      return new Response(
+        JSON.stringify({ error: "Payload too large" }),
+        {
+          status: 413,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const { characterId, messages, lastEventWeight } = body ?? {};
 
@@ -109,20 +124,70 @@ serve(async (req) => {
     // ---- Layer 2: Milestone (only if weight high) ----
     const weight = typeof lastEventWeight === "number" ? lastEventWeight : 0;
     if (weight > MILESTONE_THRESHOLD && narrativeState) {
-      // Use a 2-sentence trim of narrativeState as the milestone summary.
-      const summary = narrativeState.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+      const milestonePrompt = `
+      Determine whether this conversation contains
+      a meaningful emotional turning point.
 
-      // Quality gate Check 1 — Signal word presence
-      const SIGNAL_PHRASES = [
-        "first time", "opened up", "admitted", "confessed", "broke down",
-        "trusted", "turning point", "vulnerable", "never told", "told me",
-        "let me in", "realized", "understood", "changed", "different", "moment",
-      ];
-      const summaryLower = summary.toLowerCase();
-      const hasSignal = SIGNAL_PHRASES.some((p) => summaryLower.includes(p));
+      Examples:
+      - emotional vulnerability
+      - confession
+      - trust shift
+      - emotional breakthrough
+      - conflict escalation
+      - reconciliation
+      - deepening intimacy
 
-      if (!hasSignal) {
-        console.log("[summarize-memory] milestone skipped — no signal words");
+      If YES:
+      Return ONE short sentence summarizing the emotional turning point.
+
+      If NO:
+      Return exactly:
+      NONE
+
+      Return only the result.
+      `;
+
+      let summary = "";
+
+      try {
+        const milestoneResp = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": GEMINI_API_KEY,
+            },
+            body: JSON.stringify({
+              model: "gemini-2.5-flash",
+              messages: [
+                { role: "system", content: milestonePrompt },
+                { role: "user", content: dialogue },
+              ],
+              max_tokens: 80,
+            }),
+          }
+        );
+
+        if (milestoneResp.ok) {
+          const milestoneJson = await milestoneResp.json();
+
+          summary = (
+            milestoneJson?.choices?.[0]?.message?.content ?? ""
+          )
+            .toString()
+            .trim();
+
+          if (summary === "NONE") {
+            summary = "";
+          }
+        }
+      } catch (e) {
+        console.error("[summarize-memory] milestone generation error", e);
+      }
+
+      if (!summary) {
+        console.log("[summarize-memory] milestone skipped — no milestone detected");
       } else {
         const { data: existing } = await supabase
           .from("character_milestones")
@@ -187,7 +252,33 @@ serve(async (req) => {
 
     // ---- Layer 3: Learned preferences ----
     try {
-      const prefPrompt = `Identify 0–2 stable user behavioral preferences emerging from this conversation. A preference is HOW the user likes to be related to (e.g. "responds well to brief, grounded reassurance", "prefers being teased gently before being praised"). NOT topics, NOT events. Each preference: one short sentence, no names, no nouns describing topics. If nothing clear emerges, return an empty array.`;
+      const prefPrompt = `
+        Identify 0–2 stable user behavioral preferences emerging from this conversation.
+
+        A preference is HOW the user likes to be related to.
+
+        GOOD:
+        - "responds well to brief, grounded reassurance"
+        - "prefers gentle teasing before praise"
+
+        BAD:
+        - topics
+        - events
+        - factual memories
+        - specific names
+
+        Return ONLY valid JSON in this format:
+
+        {
+          "preferences": ["preference 1", "preference 2"]
+        }
+
+        If nothing clear emerges:
+
+        {
+          "preferences": []
+        }
+        `;
 
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
@@ -199,32 +290,15 @@ serve(async (req) => {
             { role: "user", content: dialogue },
           ],
           max_tokens: 200,
-          tools: [{
-            type: "function",
-            function: {
-              name: "record_preferences",
-              description: "Record detected user preferences",
-              parameters: {
-                type: "object",
-                properties: {
-                  preferences: {
-                    type: "array",
-                    items: { type: "string" },
-                    maxItems: 2,
-                  },
-                },
-                required: ["preferences"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "record_preferences" } },
+          response_format: {
+            type: "json_object",
+          },
         }),
       });
 
       if (r.ok) {
         const j = await r.json();
-        const argsStr = j.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+        const argsStr = j.choices?.[0]?.message?.content;
         if (argsStr) {
           const parsed = JSON.parse(argsStr);
           const newPrefs: string[] = Array.isArray(parsed?.preferences) ? parsed.preferences : [];
