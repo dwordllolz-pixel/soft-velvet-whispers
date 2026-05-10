@@ -168,19 +168,23 @@ serve(async (req) => {
       }
     }
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json","x-goog-api-key": GEMINI_API_KEY,},
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gemini-2.5-flash",
         messages: [
-          { role: "system", content: finalSystemPrompt + serverOverrideBlock + relationshipBlock + `\n\nAfter your reply, you MUST call the tag_emotion tool exactly once with the dominant emotion of your reply and an intensity from 1 (subtle) to 5 (overwhelming).` },
-          ...sanitizedMessages,
+          { role: "system", content: finalSystemPrompt + serverOverrideBlock + relationshipBlock + `\n\n` },
+          // This goes above: After your reply, you MUST call the tag_emotion tool exactly once with the dominant emotion of your reply and an intensity from 1 (subtle) to 5 (overwhelming).
+          ...sanitizedMessages.slice(-8),
         ],
         stream: true,
+        temperature: 0.85,
+        max_completion_tokens: 180,
+        /* 
         tools: [{
           type: "function",
           function: {
@@ -196,8 +200,9 @@ serve(async (req) => {
               additionalProperties: false,
             },
           },
-        }],
+        }],*/
       }),
+    
     });
 
     if (!response.ok) {

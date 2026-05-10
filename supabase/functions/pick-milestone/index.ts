@@ -57,8 +57,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
       return new Response(JSON.stringify({ index: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -68,11 +68,11 @@ serve(async (req) => {
       .map((m, i) => `${i}. ${m}`)
       .join("\n");
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      headers: { "x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: "Given a user message, return only the index number of the most emotionally relevant memory. Output a single integer and nothing else." },
           { role: "user", content: `MESSAGE: ${message}\n\nMEMORIES:\n${list}` },

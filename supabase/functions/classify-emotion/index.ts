@@ -71,7 +71,7 @@ serve(async (req) => {
     );
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData?.user || (userData.user as any).is_anonymous) {
+    if (userError || !userData?.user) {
       return json({ error: "Unauthorized" }, 401);
     }
 
@@ -84,9 +84,9 @@ serve(async (req) => {
 
     console.log("[classify-emotion] raw input:", JSON.stringify(message));
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      console.error("[classify-emotion] OPENAI_API_KEY missing");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      console.error("[classify-emotion] GEMINI_API_KEY missing");
       return json({ category: "light_vulnerability", reason: "no_api_key" }, 200);
     }
 
@@ -94,15 +94,15 @@ serve(async (req) => {
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     const classifyCall = (async () => {
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         signal: controller.signal,
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: message },

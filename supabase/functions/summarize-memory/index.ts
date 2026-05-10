@@ -33,7 +33,7 @@ serve(async (req) => {
     );
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user || (userData.user as any).is_anonymous) {
+    if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,19 +63,22 @@ serve(async (req) => {
       .join("\n");
     if (dialogue.length > MAX_DIALOGUE_CHARS) dialogue = dialogue.slice(0, MAX_DIALOGUE_CHARS);
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
 
     // ---- Layer 1: Narrative state (rewrite) ----
     const narrativePrompt = `Summarize the emotional texture of this conversation in 2–3 sentences. Focus on how the interaction felt, not what was discussed. Avoid concrete nouns unless they describe emotional behavior. Do not mention specific topics, events, or facts. If you find yourself writing a noun that refers to a topic rather than an emotion, rewrite it. Return only the summary. No preamble.`;
 
     let narrativeState = "";
     try {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": GEMINI_API_KEY,
+        },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: narrativePrompt },
             { role: "user", content: dialogue },
@@ -186,11 +189,11 @@ serve(async (req) => {
     try {
       const prefPrompt = `Identify 0–2 stable user behavioral preferences emerging from this conversation. A preference is HOW the user likes to be related to (e.g. "responds well to brief, grounded reassurance", "prefers being teased gently before being praised"). NOT topics, NOT events. Each preference: one short sentence, no names, no nouns describing topics. If nothing clear emerges, return an empty array.`;
 
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        headers: { "x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: prefPrompt },
             { role: "user", content: dialogue },
