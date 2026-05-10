@@ -90,8 +90,8 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
+          "Authorization": `Bearer ${GEMINI_API_KEY}`,
+        }
         body: JSON.stringify({
           model: "gemini-2.5-flash",
           messages: [
@@ -156,8 +156,8 @@ serve(async (req) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-goog-api-key": GEMINI_API_KEY,
-            },
+              "Authorization": `Bearer ${GEMINI_API_KEY}`,
+            }
             body: JSON.stringify({
               model: "gemini-2.5-flash",
               messages: [
@@ -282,7 +282,10 @@ serve(async (req) => {
 
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
-        headers: { "x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GEMINI_API_KEY}`,
+        }
         body: JSON.stringify({
           model: "gemini-2.5-flash",
           messages: [

@@ -70,7 +70,10 @@ serve(async (req) => {
 
     const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
-      headers: { "x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GEMINI_API_KEY}`,
+      }
       body: JSON.stringify({
         model: "gemini-2.5-flash",
         messages: [
