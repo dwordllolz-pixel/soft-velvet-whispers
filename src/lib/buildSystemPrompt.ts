@@ -1,4 +1,4 @@
-import { CHARACTERS } from "./characters";
+import { CHARACTERS } from "@/data/characters";
 import { buildDynamicPrompt, DynamicPromptParams } from "./buildDynamicPrompt";
 
 interface BuildSystemPromptParams {
