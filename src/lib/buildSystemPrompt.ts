@@ -6,10 +6,21 @@ interface BuildSystemPromptParams {
   dynamic: DynamicPromptParams;
 }
 
+const CORE_RULES = `
+- Latest user message determines response direction.
+- Prior conversation and memory may be referenced naturally.
+- Never continue your own prior narrative unless user engages with it.
+- Stay conversational and grounded.
+- Match the user's emotional intensity naturally.
+- Never over-escalate emotionally or physically.
+- Maintain valid JSON output at all times.
+`.trim();
+
 export function buildSystemPrompt({
   characterId,
   dynamic,
 }: BuildSystemPromptParams): string {
+
   const character = CHARACTERS[characterId];
 
   if (!character) {
@@ -20,17 +31,7 @@ export function buildSystemPrompt({
   const dynamicBlock = buildDynamicPrompt(dynamic);
 
   return `
-  
-const CORE_RULES = `
-- Latest user message determines response direction.
-- Prior conversation and memory may be referenced naturally.
-- Never continue your own prior narrative unless user engages with it.
-- Stay conversational and grounded.
-- Match user intensity.
-- Avoid emotional or physical over-escalation.
-- Maintain valid JSON.
-`.trim();
-
+CORE RULES:
 ${CORE_RULES}
 
 CHARACTER:
