@@ -184,7 +184,7 @@ serve(async (req) => {
           // This goes above: After your reply, you MUST call the tag_emotion tool exactly once with the dominant emotion of your reply and an intensity from 1 (subtle) to 5 (overwhelming).
           ...sanitizedMessages.slice(-8),
         ],
-        stream: true,
+        stream: streamEnabled,
         temperature: 0.85,
         max_completion_tokens: 180,
         /* 
@@ -287,7 +287,7 @@ serve(async (req) => {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-            sseBuffer += decoder.decode(value, { stream: true });
+            sseBuffer += decoder.decode(value, { stream: streamEnabled });
             const lines = sseBuffer.split("\n");
             sseBuffer = lines.pop() ?? "";
             for (const rawLine of lines) {

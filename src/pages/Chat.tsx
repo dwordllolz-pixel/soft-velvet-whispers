@@ -568,7 +568,7 @@ const Chat = () => {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: streamEnabled });
 
       let idx: number;
       while ((idx = buffer.indexOf("\n")) !== -1) {
