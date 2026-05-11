@@ -126,7 +126,7 @@ function sanitizeJson(raw: string): string {
     .trim();
 }
 
-const assembledSystemPrompt = buildPrompt({
+const assembledSystemPrompt = buildSystemPrompt({
   characterId: characterId ?? "eli",
   dynamic: {
     relationshipState: (() => {
