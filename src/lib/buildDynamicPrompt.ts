@@ -21,10 +21,10 @@ export interface DynamicPromptParams {
         : "";
   
     return `
-  CURRENT RELATIONSHIP:
+  RELATIONSHIP:
   ${relationshipState}
   
-  CURRENT EMOTIONAL STATE:
+  EMOTIONAL STATE:
   ${emotionalState}
   ${memoryBlock}
   ${avoidBlock}

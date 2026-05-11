@@ -16,7 +16,7 @@ export function extractRepeatedPatterns(messages: string[]) {
       );
   
       if ((matches?.length ?? 0) >= 2) {
-        patterns.push(pattern);
+        patterns.push(`avoid using "${pattern}"`);
       }
     }
   

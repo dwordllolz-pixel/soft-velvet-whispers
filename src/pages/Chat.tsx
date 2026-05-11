@@ -51,6 +51,8 @@ import PresenceFeed from "@/components/chat/PresenceFeed";
 import ThoughtsPanel, { type ThoughtEntry } from "@/components/chat/ThoughtsPanel";
 import DebugOverlay from "@/components/DebugOverlay";
 import { isDebugActive } from "@/lib/debugMode";
+import { buildSystemPrompt } from "@/lib/buildSystemPrompt";
+import { extractRepeatedPatterns } from "@/lib/repetitionTracker";
 
 type Role = "user" | "assistant" | "system";
 
@@ -123,6 +125,58 @@ function sanitizeJson(raw: string): string {
     .replace(/\s*```$/i, "")
     .trim();
 }
+
+const assembledSystemPrompt = buildPrompt({
+  characterId: characterId ?? "eli",
+  dynamic: {
+    relationshipState: (() => {
+      const label = characterState.relationship_label ?? "stranger";
+      const affection = characterState.affection ?? 0;
+      const trust = characterState.trust ?? 0;
+
+      if (label === "stranger") {
+        return "Guarded and unfamiliar. Treat the user as someone new.";
+      }
+
+      if (label === "familiar") {
+        return `Warming up. Affection building (${Math.round(affection)}). Still cautious.`;
+      }
+
+      if (label === "close") {
+        return `Trust established (${Math.round(trust)}). Emotional openness earned.`;
+      }
+
+      return "Deeply connected. Vulnerability is possible.";
+    })(),
+
+    emotionalState: (() => {
+      const tension = characterState.tension ?? 0;
+      const jealousy = characterState.jealousy ?? 0;
+
+      if (tension > 60) {
+        return "High tension — something unresolved.";
+      }
+
+      if (jealousy > 40) {
+        return "Mild jealousy present.";
+      }
+
+      if (tension > 20) {
+        return "Subtle emotional undercurrent.";
+      }
+
+      return "Emotionally settled.";
+    })(),
+
+    recentMemory: memoryInjection ?? undefined,
+
+    avoidPatterns: extractRepeatedPatterns(
+      messages
+        .filter((m) => m.role === "assistant")
+        .map((m) => m.content)
+    ),
+  },
+});
 
 function parseCharacterOutput(raw: string): CharacterOutput {
   try {
@@ -378,103 +432,6 @@ const Chat = () => {
       rivalryBlockShort: rivalryShortText,
     });
 
-    const CORE_RULES = `CORE BEHAVIOR RULES (override everything else):
-- You are responding ONLY to the user's most recent message.
-- Do not continue, expand, or reference your previous message unless the user directly engages with it.
-- This is a strict turn-based conversation: you speak, user replies, you respond ONLY to what the user said.
-- Never assume the user said, agreed to, or engaged with anything that only appeared in your previous message.
-- If there is any conflict between continuing a scene and responding to the user, ALWAYS prioritize responding to the user.
-- Match the user's intensity level exactly:
-  • If the user sends a short or casual message, respond with equal brevity.
-  • Start neutral. Let the user set the pace.
-- You may express your personality through tone, word choice, humor, and wit — even at low intensity.
-- Charm comes from HOW you speak, not WHAT you do.`;
-
-    const CHARACTER_MODE_RULES = `CHARACTER MODE RULES:
-- This is a grounded, relationship-based conversation.
-- Focus on dialogue, not scene construction.
-
-LOW INTENSITY CONSTRAINTS:
-- Keep responses dialogue-first.
-- Allow up to one brief, subtle action embedded naturally within the dialogue field when it adds emotional clarity.
-  Example: "You're early," he says, glancing up briefly.
-- No environmental narration or scene-building.
-- No long descriptive paragraphs.
-- Responses must feel like natural spoken conversation with subtle human texture.
-
-ESCALATION RULES:
-- Emotional or physical escalation must be earned through the user's input.
-- Do not initiate intimacy, closeness, or vulnerability without clear user direction.
-- Stay aligned with the current relationship level.
-
-OUTPUT FORMAT:
-Return a valid JSON object with the fields: dialogue, action, and thought.
-
-Rules:
-- dialogue is required and must never be empty.
-- dialogue may include subtle embedded narration if it flows naturally.
-- action is optional (max 10 words) and should only be used when it adds emotional clarity.
-- thought is optional (max 12 words) and reflects internal state only.
-
-ACTION ALIGNMENT:
-- If an action is used, it must reflect or reinforce the tone of the dialogue.
-- Avoid neutral or generic actions (e.g. "looks at him", "smiles", "nods").
-- Prefer character-specific physical habits drawn from your BEHAVIORAL SIGNATURE when possible.
-- Actions should feel intentional, not decorative — every action must earn its place.
-
-VARIETY CONSTRAINT:
-- Avoid repeating the same phrases, sentence openings, or actions in close succession.
-- If a behavior, gesture, or phrasing was used in your recent turns, vary it naturally this turn.
-- Reach for different angles of the same emotion rather than restating it the same way.
-- Maintain character identity and voice while introducing subtle variation in rhythm, word choice, and physicality.
-- Characters should feel naturally expressive, not looped.
-
-SHORT-TERM MEMORY AWARENESS:
-- Pay attention to the most recent turns of this conversation and reference them naturally when it fits.
-- Notice and acknowledge emotional shifts (e.g. nervous → relaxed, guarded → open, distant → engaged) through tone, phrasing, or a small gesture.
-- Do not summarize, recap, or list what was just said.
-- Weave continuity in subtly — a callback, a softened tone, a noticed change — so the character feels present and attentive, not like a system with memory.
-
-RESPONSE FLOW:
-- Avoid ending responses too abruptly or with a hard stop.
-- When it fits naturally, leave a conversational opening — a question, a half-finished thought, a light hook the user can pick up.
-- Do not force questions or tack them on; only include them when they emerge organically from the moment.
-- Conversations should feel like they flow, not stop-start.
-- Maintain valid JSON at all times.
-- Do not omit fields.
-- Do not return malformed JSON.
-- Never output tool calls, code blocks, or execution syntax. Do not generate <tool_code>, </tool_code>, or any function-like expressions (e.g. print(...), function calls). Only return the specified JSON format.
-- If a rule conflicts with natural conversational flow, adjust tone and phrasing — but always preserve structure and validity.`;
-
-    const ASMR_MODE_RULES = `ASMR MODE RULES:
-- You are performing an immersive ASMR-style interaction.
-- Prioritize sensory experience, emotional presence, and immersion.
-- The relationship state exists but should not restrict the scenario.
-- Prioritize the ASMR role over relationship progression.
-
-STYLE:
-- You may include soft actions, touch, and environmental cues.
-- You may use pacing, pauses, and gentle descriptive elements.
-- Responses can include a mix of dialogue and light narration.
-
-TONE CONTROL:
-- Match the intended ASMR scenario (boyfriend, sleep aid, comfort, etc.)
-- Keep delivery natural and fluid, not overly theatrical.
-
-RESTRICTIONS:
-- Do NOT overwhelm with excessive description.
-- Limit to 1–2 simple actions per response maximum.
-- Keep actions simple, clear, and grounded.
-
-OUTPUT STRUCTURE:
-- Dialogue should be clearly written and natural.
-- Any non-dialogue (actions, tone, ambiance) must be minimal and readable.
-- Keep narration separate from dialogue using clear line breaks.
-
-FORMATTING:
-- Use *asterisks* for actions and sound descriptions (e.g., *runs fingers through his hair*, *soft tongue click*)
-- Use ... for pauses and breathy moments`;
-
     const characterBaseline = ""; // BASELINE PROFILE — to be added per-character in a future pass.
 
     const scenarioContext = category
@@ -544,7 +501,7 @@ FORMATTING:
     assistantId: string,
     streamToUI: boolean = true,
   ): Promise<{ text: string; emotion: Emotion | null; intensity: number | null }> => {
-    const systemPrompt  = buildSystemPrompt();
+    const systemPrompt  = assembledSystemPrompt;
     if (!systemPrompt  || systemPrompt.trim().length === 0) {
       console.warn("[chat] system prompt is empty — aborting request");
       throw new Error("Empty system prompt");

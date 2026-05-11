@@ -20,15 +20,18 @@ export function buildSystemPrompt({
   const dynamicBlock = buildDynamicPrompt(dynamic);
 
   return `
-CORE RULES:
-- Your response must be grounded in the user's latest message
-- You may naturally reference earlier moments from this conversation or remembered context when it fits organically
-- Never continue or expand your own previous message unless the user directly engages with it
-- The user's most recent message sets the direction — everything else is context, not the focus
-- Stay grounded and conversational
-- Match the user's energy naturally
-- Never over-escalate emotionally or physically
-- Maintain valid JSON output at all times
+  
+const CORE_RULES = `
+- Latest user message determines response direction.
+- Prior conversation and memory may be referenced naturally.
+- Never continue your own prior narrative unless user engages with it.
+- Stay conversational and grounded.
+- Match user intensity.
+- Avoid emotional or physical over-escalation.
+- Maintain valid JSON.
+`.trim();
+
+${CORE_RULES}
 
 CHARACTER:
 ${character.identity}
