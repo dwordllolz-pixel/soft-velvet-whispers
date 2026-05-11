@@ -115,25 +115,45 @@ function extractFirstJsonObject(text: string): string | null {
   return null;
 }
 
+function sanitizeJson(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
 function parseCharacterOutput(raw: string): CharacterOutput {
   try {
-    const stripped = stripToolArtifacts(raw);
-    const jsonSlice = extractFirstJsonObject(stripped);
-    if (!jsonSlice) throw new Error("no json object found");
-    const parsed = JSON.parse(jsonSlice);
+    const cleaned = sanitizeJson(raw);
+
+    if (new URLSearchParams(window.location.search).get("debug") === "true") {
+      console.log("[character output raw]:", raw);
+      console.log("[character output cleaned]:", cleaned);
+    }
+
+    const parsed = JSON.parse(cleaned);
+
     return {
-      dialogue: typeof parsed.dialogue === "string" && parsed.dialogue.trim()
-        ? parsed.dialogue.trim()
-        : raw,
-      action: typeof parsed.action === "string" && parsed.action.trim()
-        ? parsed.action.trim()
-        : null,
-      thought: typeof parsed.thought === "string" && parsed.thought.trim()
-        ? parsed.thought.trim()
-        : null,
+      dialogue:
+        typeof parsed.dialogue === "string" && parsed.dialogue.trim()
+          ? parsed.dialogue.trim()
+          : raw,
+      action:
+        typeof parsed.action === "string" && parsed.action.trim()
+          ? parsed.action.trim()
+          : null,
+      thought:
+        typeof parsed.thought === "string" && parsed.thought.trim()
+          ? parsed.thought.trim()
+          : null,
     };
-  } catch (err) {
-    console.error("[parseCharacterOutput] failed with raw content", raw, err);
+  } catch {
+    // Parse failed — treat entire response as dialogue
+    if (new URLSearchParams(window.location.search).get("debug") === "true") {
+      console.warn("[character output] JSON parse failed, falling back to raw text");
+    }
     return { dialogue: raw, action: null, thought: null };
   }
 }
@@ -524,12 +544,12 @@ FORMATTING:
     assistantId: string,
     streamToUI: boolean = true,
   ): Promise<{ text: string; emotion: Emotion | null; intensity: number | null }> => {
-    const dynamic = buildSystemPrompt();
-    if (!dynamic || dynamic.trim().length === 0) {
-      console.warn("[chat] dynamic prompt is empty — aborting request");
-      throw new Error("Empty dynamic prompt");
+    const systemPrompt  = buildSystemPrompt();
+    if (!systemPrompt  || systemPrompt.trim().length === 0) {
+      console.warn("[chat] system prompt is empty — aborting request");
+      throw new Error("Empty system prompt");
     }
-    console.log("[chat] dynamic prompt:", dynamic);
+    console.log("[chat] dynamic prompt:", systemPrompt );
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
@@ -538,17 +558,47 @@ FORMATTING:
       },
       body: JSON.stringify({
         messages: apiMessages,
-        systemPrompt: dynamic,
+        systemPrompt: systemPrompt,
         characterId,
         asmrType,
+        stream: chatMode !== "character",
       }),
     });
 
-    if (!resp.ok || !resp.body) {
+    if (!resp.ok) {
       const err = new Error(`Chat request failed: ${resp.status}`);
       (err as Error & { status?: number }).status = resp.status;
       throw err;
     }
+    
+    // CHARACTER MODE → NON-STREAMING
+    if (chatMode === "character") {
+      const json = await resp.json();
+    
+      console.log("[character raw response]", json);
+    
+      const text =
+        json.choices?.[0]?.message?.content ??
+        json.candidates?.[0]?.content?.parts?.[0]?.text ??
+        "";
+    
+      if (!text) {
+        throw new Error("Empty response from model");
+      }
+    
+      return {
+        text,
+        emotion: null,
+        intensity: null,
+      };
+    }
+    
+    // STREAMING MODES ONLY
+    if (!resp.body) {
+      throw new Error("Missing response body for stream");
+    }
+    
+    // existing stream reader logic below
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
