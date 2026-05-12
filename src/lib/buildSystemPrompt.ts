@@ -1,5 +1,9 @@
-import { CHARACTERS } from "@/data/characters";
+import { characters } from "@/data/characters";
 import { buildDynamicPrompt, DynamicPromptParams } from "./buildDynamicPrompt";
+
+const CHARACTERS = Object.fromEntries(
+  characters.map((c) => [c.id, c])
+);
 
 interface BuildSystemPromptParams {
   characterId: string;
@@ -30,24 +34,12 @@ export function buildSystemPrompt({
 
   const dynamicBlock = buildDynamicPrompt(dynamic);
 
-  return `
-CORE RULES:
-${CORE_RULES}
-
-CHARACTER:
-${character.identity}
-
-SPEECH STYLE:
-${character.speechStyle.map((s) => `- ${s}`).join("\n")}
-
-BEHAVIOR:
-${character.behaviorTags.map((b) => `- ${b}`).join("\n")}
-
-BOUNDARIES:
-${character.boundaries.map((b) => `- ${b}`).join("\n")}
-
-${dynamicBlock}
-
-${character.formattingRules}
-`.trim();
+  return [
+    character.systemPromptBase,
+    CORE_RULES,
+    dynamicBlock,
+  ]
+    .filter((s) => s && s.trim().length > 0)
+    .join("\n\n")
+    .trim();
 }

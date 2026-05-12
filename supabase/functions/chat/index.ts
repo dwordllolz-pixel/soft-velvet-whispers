@@ -44,6 +44,9 @@ serve(async (req) => {
     const body = await req.json();
     const { messages, systemPrompt, characterId, asmrType } = body ?? {};
 
+    const isCharacterMode = typeof asmrType !== "string" || asmrType.trim().length === 0;
+    const streamEnabled = !isCharacterMode;
+
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "messages must be a non-empty array" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -186,7 +189,7 @@ serve(async (req) => {
         ],
         stream: streamEnabled,
         temperature: 0.85,
-        max_completion_tokens: 180,
+        max_completion_tokens: 800,
         /* 
         tools: [{
           type: "function",
@@ -227,9 +230,7 @@ serve(async (req) => {
       });
     }
 
-    // Determine chat mode. Character chat = no asmrType. ASMR mode = asmrType present.
-    const isCharacterMode =
-      typeof asmrType !== "string" || asmrType.trim().length === 0;
+    
 
     // Pure SSE pass-through for ASMR mode (no formatting changes).
     if (!isCharacterMode) {

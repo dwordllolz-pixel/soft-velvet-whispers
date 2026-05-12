@@ -126,57 +126,6 @@ function sanitizeJson(raw: string): string {
     .trim();
 }
 
-const assembledSystemPrompt = buildSystemPrompt({
-  characterId: characterId ?? "eli",
-  dynamic: {
-    relationshipState: (() => {
-      const label = characterState.relationship_label ?? "stranger";
-      const affection = characterState.affection ?? 0;
-      const trust = characterState.trust ?? 0;
-
-      if (label === "stranger") {
-        return "Guarded and unfamiliar. Treat the user as someone new.";
-      }
-
-      if (label === "familiar") {
-        return `Warming up. Affection building (${Math.round(affection)}). Still cautious.`;
-      }
-
-      if (label === "close") {
-        return `Trust established (${Math.round(trust)}). Emotional openness earned.`;
-      }
-
-      return "Deeply connected. Vulnerability is possible.";
-    })(),
-
-    emotionalState: (() => {
-      const tension = characterState.tension ?? 0;
-      const jealousy = characterState.jealousy ?? 0;
-
-      if (tension > 60) {
-        return "High tension — something unresolved.";
-      }
-
-      if (jealousy > 40) {
-        return "Mild jealousy present.";
-      }
-
-      if (tension > 20) {
-        return "Subtle emotional undercurrent.";
-      }
-
-      return "Emotionally settled.";
-    })(),
-
-    recentMemory: memoryInjection ?? undefined,
-
-    avoidPatterns: extractRepeatedPatterns(
-      messages
-        .filter((m) => m.role === "assistant")
-        .map((m) => m.content)
-    ),
-  },
-});
 
 function parseCharacterOutput(raw: string): CharacterOutput {
   try {
@@ -402,7 +351,7 @@ const Chat = () => {
     );
   }
 
-  const buildSystemPrompt = () => {
+  const buildLegacySystemPrompt = () => {
     // Phase 5 — Rivalry: build block only in character mode and when not incognito.
     let rivalryBlockText = "";
     let rivalryShortText: string | undefined;
@@ -501,12 +450,75 @@ const Chat = () => {
     assistantId: string,
     streamToUI: boolean = true,
   ): Promise<{ text: string; emotion: Emotion | null; intensity: number | null }> => {
-    const systemPrompt  = assembledSystemPrompt;
-    if (!systemPrompt  || systemPrompt.trim().length === 0) {
+    
+  const memoryInjection =
+    characterId && !isMemoryInjectionPaused(characterId)
+      ? buildMemoryBlock(memoryBundleRef.current, characterId)
+      : undefined;
+
+    const assembledSystemPrompt = buildSystemPrompt({
+      characterId: characterId ?? "eli",
+      dynamic: {
+        relationshipState: (() => {
+          const label = characterState.relationship_label ?? "stranger";
+          const affection = characterState.affection ?? 0;
+          const trust = characterState.trust ?? 0;
+  
+          if (label === "stranger") {
+            return "Guarded and unfamiliar. Treat the user as someone new.";
+          }
+  
+          if (label === "familiar") {
+            return `Warming up. Affection is building (${Math.round(affection)}) but still cautious.`;
+          }
+  
+          if (label === "close") {
+            return `Genuinely invested. Trust is established (${Math.round(trust)}). Emotional openness is earned.`;
+          }
+  
+          return "Deeply connected. High trust and affection.";
+        })(),
+  
+        emotionalState: (() => {
+          const tension = characterState.tension ?? 0;
+          const jealousy = characterState.jealousy ?? 0;
+  
+          if (tension > 60) {
+            return "High tension — something unresolved exists.";
+          }
+  
+          if (jealousy > 40) {
+            return "Mild jealousy present.";
+          }
+  
+          if (tension > 20) {
+            return "Slight emotional undercurrent.";
+          }
+  
+          return "Settled and emotionally stable.";
+        })(),
+  
+        recentMemory: memoryInjection ?? undefined,
+  
+        avoidPatterns: extractRepeatedPatterns(
+          messages
+            .filter((m) => m.role === "assistant")
+            .map((m) => m.content)
+        ),
+      },
+    });
+    console.log("[debug] imported builder result:", assembledSystemPrompt);
+    console.log("[debug] memoryInjection:", memoryInjection);
+    
+    const systemPrompt = assembledSystemPrompt;
+  
+    if (!systemPrompt || systemPrompt.trim().length === 0) {
       console.warn("[chat] system prompt is empty — aborting request");
       throw new Error("Empty system prompt");
     }
-    console.log("[chat] dynamic prompt:", systemPrompt );
+  
+    console.log("[chat] system prompt:", systemPrompt);
+  
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
@@ -515,7 +527,7 @@ const Chat = () => {
       },
       body: JSON.stringify({
         messages: apiMessages,
-        systemPrompt: systemPrompt,
+        systemPrompt: assembledSystemPrompt,
         characterId,
         asmrType,
         stream: chatMode !== "character",
