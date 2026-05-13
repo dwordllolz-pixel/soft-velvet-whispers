@@ -38,6 +38,16 @@ export function buildSystemPrompt({
     character.systemPromptBase,
     CORE_RULES,
     dynamicBlock,
+    `RESPONSE FORMAT — MANDATORY. Respond with a single valid JSON object and 
+nothing else. No prose, no markdown, no text outside the JSON.
+
+{
+  "dialogue": "what you say out loud",
+  "action": "*physical action in asterisks, or null if none*",
+  "thought": "your internal thought the user cannot hear, or null if none"
+}
+
+Any response that is not valid JSON will be rejected.`,
   ]
     .filter((s) => s && s.trim().length > 0)
     .join("\n\n")
