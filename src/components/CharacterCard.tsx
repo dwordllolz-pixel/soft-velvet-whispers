@@ -12,8 +12,17 @@ const CharacterCard = ({ character, isFavorite, onToggleFavorite }: CharacterCar
   const navigate = useNavigate();
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => navigate(`/character/${character.id}`)}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/character/${character.id}`);
+        }
+      }}
       className="w-full text-left glass rounded-xl overflow-hidden transition-all duration-300 hover:glow-purple active:scale-[0.98] group relative"
     >
       {/* Favorite button */}
@@ -54,7 +63,7 @@ const CharacterCard = ({ character, isFavorite, onToggleFavorite }: CharacterCar
         <h3 className="font-heading font-semibold text-foreground text-sm">{character.name}</h3>
         <p className="text-muted-foreground text-xs mt-0.5 line-clamp-1">{character.archetype}</p>
       </div>
-    </button>
+    </div>
   );
 };
 
