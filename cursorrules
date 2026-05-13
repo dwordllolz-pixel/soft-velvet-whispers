@@ -1,0 +1,137 @@
+# Whisper Project Rules
+
+## Core Architecture
+- This is a Gemini-powered AI companion platform called Whisper.
+- Frontend: React + TypeScript + Vite
+- Backend: Supabase Edge Functions
+- Main chat flow:
+  Chat.tsx
+  -> buildSystemPrompt.ts
+  -> Supabase edge function
+  -> Gemini API
+  -> parsed structured response
+  -> rendered chat UI
+- Do not create duplicate prompt builders.
+- Never shadow imported functions with local functions.
+- Prompt assembly must always flow through buildSystemPrompt.ts.
+
+## Character System
+- Character IDs are lowercase string keys from CHARACTERS.
+- Character definitions currently rely primarily on systemPromptBase.
+- Do not assume optional fields exist unless verified in types/data:
+  speechStyle, behaviorTags, boundaries, identity
+- Character prompts prioritize:
+  emotional continuity, grounded conversational realism,
+  gradual relationship progression, behavioral consistency.
+- buildLegacySystemPrompt exists as a local function in Chat.tsx.
+  Do NOT call it. Do NOT delete it. It is reserved for Phase 5 only.
+- rivalry.ts does not exist yet. Do not reference or import it until Phase 5.
+
+## Memory System
+- Memory injection is controlled through:
+  buildMemoryBlock(...), memoryBundleRef.current, isMemoryInjectionPaused(...)
+- Never inject memory directly into prompts outside the centralized prompt builder.
+- Always check !isMemoryInjectionPaused(characterId) before injecting memory.
+- Memory architecture includes: short-term, long-term, emotional memory continuity.
+- Do not modify memory injection logic without reading memory.ts in full first.
+
+## Edge Functions
+- Edge functions live in supabase/functions/.
+- Do not create new edge functions unless explicitly requested.
+- Preserve compatibility between frontend request shape and edge function parsing.
+- Character mode: stream = false. ASMR mode: stream = true.
+- streamEnabled and isCharacterMode must be declared at the TOP of the try block,
+  before any other logic. Never use them before they are defined.
+- max_completion_tokens: 800. Do not lower this value.
+- Background task functions use Gemini Flash Lite, not Flash.
+- Never hardcode API keys. All secrets live in the Supabase dashboard.
+
+## Gemini Usage
+- Main conversational model: Gemini 2.5 Flash.
+- Lightweight/background systems (classifier, summarizer, milestone picker): Gemini 2.5 Flash Lite.
+- Current provider stack is Gemini-only unless explicitly changed by the user.
+- Preserve valid JSON formatting in all structured responses.
+- Character mode must return this exact JSON shape:
+  { "dialogue": string, "action": string | null, "thought": string | null }
+
+## Code Safety Rules
+- Before any edit: state what you are changing, why, and what you are NOT touching.
+- Never add an import without first verifying the export exists in the target file.
+- Before refactoring: search the entire codebase for all references, imports, and usages.
+- Prefer extending existing systems over creating parallel ones.
+- Never delete legacy systems unless confirmed unused via @codebase search.
+- If a function appears duplicated, first determine whether it is:
+  legacy migration code / shadowed import / dead code / active runtime path.
+- Make the smallest possible change that fixes the issue.
+- Never rewrite a working system to fix an unrelated bug.
+- Never create a new file without stating explicitly:
+  "I am creating [filename] because [reason]."
+
+## Current System State
+WORKING:
+- Chat pipeline end to end (frontend -> Gemini -> response)
+- TTS pipeline (Chatterbox local, ngrok tunnel, sentence pipelining)
+- Emotion classifier (classify-emotion edge function)
+- Relationship axes (affection, trust, tension, jealousy, attachmentShift)
+- Supabase auth
+
+BROKEN / IN PROGRESS:
+- Gemini returning prose instead of JSON (next fix: append JSON schema to buildSystemPrompt.ts)
+- Memory injection empty at runtime (Supabase tables may not exist or RLS blocking)
+- Thoughts not rendering (blocked by JSON fix)
+- summarize-memory edge function not deployed
+- pick-milestone edge function not deployed
+
+DO NOT TOUCH (working, locked by design):
+- TTS pipeline architecture
+- Chatterbox running locally via ngrok (no cloud hosting)
+- cfg_weight (never below 0.45), chunk_size (never below 60)
+- Stream mode separation (character = false, asmr = true)
+
+## Workflow Expectations
+- Use @codebase before making any architectural suggestions.
+- Explain WHY a bug occurs, not just what the fix is.
+- Prefer minimal surgical fixes over rewrites.
+- Preserve roadmap compatibility (see whisper-roadmap-v2.md).
+- After every change: state what to verify in the browser console.
+
+## Source of Truth Rules
+- buildSystemPrompt.ts is the ONLY source of truth for character prompt assembly.
+- CHARACTERS data is the ONLY source of truth for character definitions.
+- Chat.tsx orchestrates flow but must not contain duplicated prompt logic.
+- Supabase edge functions are the ONLY backend execution layer.
+
+## Structured Output Rules
+- Never trust model output blindly.
+- Always parse character responses defensively.
+- If JSON parsing fails:
+  log the raw output, attempt safe extraction, never crash the UI.
+- Preserve graceful fallback behavior at all times.
+- The expected character response shape is always:
+  { "dialogue": string, "action": string | null, "thought": string | null }
+
+## Prompt Efficiency
+- Avoid duplicating behavioral instructions across prompt layers.
+- Prefer reusable prompt blocks over repeated prose.
+- Static character traits belong in systemPromptBase.
+- Dynamic emotional state belongs in dynamic prompt assembly.
+- Memory injection must remain concise and high-signal.
+
+## File Safety
+- Never reference files that do not exist.
+- Never assume exports exist without verification.
+- If unsure whether a module exists: search @codebase first.
+- Do not invent utility files, hooks, or helper modules.
+- rivalry.ts is the canonical example of this failure — it was imported before it existed.
+
+## Phase Awareness
+- Features marked for future roadmap phases must NOT be partially implemented early.
+- Stub imports are acceptable. Half-integrated systems are not.
+- Current phase: Phase 4 (Memory System). See whisper-roadmap-v2.md.
+- Phase 5 work (rivalry system) must not begin until Phase 4 is complete and stable.
+
+## Documentation
+- When major architecture changes occur, update ARCHITECTURE.md.
+- Update roadmap references in whisper-roadmap-v2.md when phases are completed.
+- Future docs to create as systems mature:
+  ARCHITECTURE.md, PROMPT_PIPELINE.md, MEMORY_SYSTEM.md, EDGE_FUNCTION_FLOW.md
