@@ -128,33 +128,102 @@ function sanitizeJson(raw: string): string {
 
 
 function parseCharacterOutput(raw: string): CharacterOutput {
+  const unwrapFencedValue = (input: string): string => {
+    let s = input.trim();
+    for (let i = 0; i < 5; i++) {
+      const next = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      if (next === s) break;
+      s = next;
+    }
+    return s;
+  };
+
+  const coerceOptionalStringField = (value: unknown, depth: number): string | null => {
+    if (depth > 20) return null;
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string") {
+      const t = unwrapFencedValue(value);
+      return t.length > 0 ? t : null;
+    }
+    if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+      const t = String(value).trim();
+      return t.length > 0 ? t : null;
+    }
+    if (Array.isArray(value)) {
+      const parts: string[] = [];
+      for (const item of value) {
+        const part = coerceOptionalStringField(item, depth + 1);
+        if (part !== null) parts.push(part);
+      }
+      return parts.length > 0 ? parts.join("\n") : null;
+    }
+    if (typeof value === "object") {
+      try {
+        const t = JSON.stringify(value).trim();
+        return t.length > 0 ? t : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const coerceDialogue = (value: unknown): string => {
+    const t = coerceOptionalStringField(value, 0);
+    return t !== null && t.trim().length > 0 ? t.trim() : raw;
+  };
+
+  const isDebug = new URLSearchParams(window.location.search).get("debug") === "true";
+
   try {
     const cleaned = sanitizeJson(raw);
 
-    if (new URLSearchParams(window.location.search).get("debug") === "true") {
+    if (isDebug) {
       console.log("[character output raw]:", raw);
       console.log("[character output cleaned]:", cleaned);
     }
 
-    const parsed = JSON.parse(cleaned);
+    let parsed: unknown;
+    let parseOk = false;
+    try {
+      parsed = JSON.parse(cleaned);
+      parseOk = true;
+    } catch {
+      // first JSON.parse failed — second attempt after extra fence stripping
+    }
 
+    if (!parseOk) {
+      let alt = cleaned;
+      for (let i = 0; i < 5; i++) {
+        alt = alt.replace(/^```[a-zA-Z]*\s*/i, "").replace(/\s*```$/i, "").trim();
+      }
+      try {
+        parsed = JSON.parse(alt);
+        parseOk = true;
+      } catch {
+        // still invalid JSON
+      }
+    }
+
+    if (!parseOk) {
+      if (isDebug) {
+        console.warn("[character output] JSON parse failed, falling back to raw text");
+      }
+      return { dialogue: raw, action: null, thought: null };
+    }
+
+    if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
+      return { dialogue: raw, action: null, thought: null };
+    }
+
+    const rec = parsed as Record<string, unknown>;
     return {
-      dialogue:
-        typeof parsed.dialogue === "string" && parsed.dialogue.trim()
-          ? parsed.dialogue.trim()
-          : raw,
-      action:
-        typeof parsed.action === "string" && parsed.action.trim()
-          ? parsed.action.trim()
-          : null,
-      thought:
-        typeof parsed.thought === "string" && parsed.thought.trim()
-          ? parsed.thought.trim()
-          : null,
+      dialogue: coerceDialogue(rec["dialogue"]),
+      action: coerceOptionalStringField(rec["action"], 0),
+      thought: coerceOptionalStringField(rec["thought"], 0),
     };
   } catch {
-    // Parse failed — treat entire response as dialogue
-    if (new URLSearchParams(window.location.search).get("debug") === "true") {
+    if (isDebug) {
       console.warn("[character output] JSON parse failed, falling back to raw text");
     }
     return { dialogue: raw, action: null, thought: null };
