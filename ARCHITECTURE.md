@@ -16,6 +16,7 @@
 - `buildSystemPrompt({ characterId, dynamic })` — `src/lib/buildSystemPrompt.ts`.
 - Sections joined: `systemPromptBase` → `CORE_RULES` (this file) → `buildDynamicPrompt(dynamic)` → mandatory JSON-only block.
 - `dynamic` from `Chat.tsx` / `streamChatAttempt`: `relationshipState`, `emotionalState`, `recentMemory`, `avoidPatterns`.
+- Mandatory JSON response contract enforced client-side through prompt instructions, not schema/tool calling.
 
 ### `buildDynamicPrompt` (`src/lib/buildDynamicPrompt.ts`)
 
@@ -24,8 +25,8 @@
 ### Edge merge (`supabase/functions/chat/index.ts`)
 
 - `finalSystemPrompt` ← client `systemPrompt` when valid.
-- **`serverOverrideBlock`:** from `users.profile_data` — NSFW tier + boundaries (server-authoritative).
-- **`relationshipBlock`:** optional short line from DB `relationship_label` + `message_count` for `characterId`.
+- `**serverOverrideBlock`:** from `users.profile_data` — NSFW tier + boundaries (server-authoritative).
+- `**relationshipBlock`:** optional short line from DB `relationship_label` + `message_count` for `characterId`.
 - **Effective system prompt Gemini receives:** **client `systemPrompt` + `serverOverrideBlock` + `relationshipBlock`** (code appends trailing newlines before history).
 
 ## Edge `chat` responsibilities
@@ -37,9 +38,9 @@
 
 ## JSON parsing (character mode)
 
-- **`parseCharacterOutput`** (local in `Chat.tsx`): `sanitizeJson` → `JSON.parse` → typed `dialogue` / `action` / `thought`.
+- `**parseCharacterOutput`** (local in `Chat.tsx`): `sanitizeJson` → `JSON.parse` → typed `dialogue` / `action` / `thought`.
 - **Fallback:** parse failure or bad fields → `dialogue` = raw string; `action` / `thought` = `null`.
-- **`ChatMessage.tsx`:** separate JSON display guard; not the same function as `parseCharacterOutput`.
+- `**ChatMessage.tsx`:** separate JSON display guard; not the same function as `parseCharacterOutput`.
 
 ## Emotional classification (`classify-emotion`)
 
@@ -51,9 +52,9 @@
 ## Memory injection
 
 - **When:** character mode, character ∈ `MEMORY_CHARACTERS`, user logged in, not incognito, not `isMemoryInjectionPaused(characterId)`.
-- **`fetchMemoryBundle`** → result in **`memoryBundleRef`** (send handler).
-- **`buildMemoryBlock(bundle, characterId)`** → string **`memoryInjection`** in `streamChatAttempt` if not paused.
-- Wired as **`dynamic.recentMemory`** → `RECENT MEMORY:` in `buildDynamicPrompt`.
+- `**fetchMemoryBundle`** → result in `**memoryBundleRef**` (send handler).
+- `**buildMemoryBlock(bundle, characterId)**` → string `**memoryInjection**` in `streamChatAttempt` if not paused.
+- Wired as `**dynamic.recentMemory**` → `RECENT MEMORY:` in `buildDynamicPrompt`.
 - Pause: sessionStorage guard; fetch skipped / bundle cleared when paused.
 
 ## Character state (axes / label / scores)
@@ -64,8 +65,8 @@
 
 ## Dead / inactive code (explicit)
 
-- **`buildLegacySystemPrompt`** (`Chat.tsx`) is **NOT used** in production chat flow — **no callers** in `src/`.
-- **`buildDynamicPromptBlock`** (`src/lib/promptInjection.ts`) is **currently inactive** — only referenced from unused `buildLegacySystemPrompt`.
+- `**buildLegacySystemPrompt`** (`Chat.tsx`) is **NOT used** in production chat flow — **no callers** in `src/`.
+- `**buildDynamicPromptBlock`** (`src/lib/promptInjection.ts`) is **currently inactive** — only referenced from unused `buildLegacySystemPrompt`.
 
 ## Supabase
 
@@ -80,14 +81,17 @@
 - Edge concatenates **client `systemPrompt` + `serverOverrideBlock` + `relationshipBlock`** for system role.
 - Gemini: `messages` = [system] + `sanitizedMessages.slice(-8)`; `stream` per mode.
 - Client consumes JSON (character) or SSE (ASMR).
+- Character mode currently uses non-stream JSON responses; ASMR mode uses SSE streaming responses.
 
 ## Active vs legacy
 
-| Active | Legacy / inactive |
-|--------|-------------------|
-| `buildSystemPrompt` + `buildDynamicPrompt` | `buildLegacySystemPrompt` |
-| `buildMemoryBlock` + ref | `buildDynamicPromptBlock` |
-| `buildSystemPrompt.ts` `CORE_RULES` | `Chat.tsx` `CORE_RULES` (dead path only) |
+
+| Active                                     | Legacy / inactive                        |
+| ------------------------------------------ | ---------------------------------------- |
+| `buildSystemPrompt` + `buildDynamicPrompt` | `buildLegacySystemPrompt`                |
+| `buildMemoryBlock` + ref                   | `buildDynamicPromptBlock`                |
+| `buildSystemPrompt.ts` `CORE_RULES`        | `Chat.tsx` `CORE_RULES` (dead path only) |
+
 
 ## Architectural risks
 
@@ -97,3 +101,6 @@
 - **Weight sync:** `classify-emotion` vs `relationshipAxes` `EVENT_WEIGHTS` must stay aligned manually.
 - **Character mode emotions:** `streamChatAttempt` returns `emotion`/`intensity` null for character path — downstream features assume defaults.
 - **Dead code trap:** changes to `buildLegacySystemPrompt` / `promptInjection` silently do nothing for live chat.
+- Context pressure risk: large character prompts + memory injection + server blocks reduce available response budget and may increase truncation risk.
+- summarize-memory and pick-milestone edge functions not yet deployed — memory never accumulates until both are live.
+
