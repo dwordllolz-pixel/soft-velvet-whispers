@@ -889,7 +889,10 @@ const Chat = () => {
     // Failure is swallowed inside fetchMemoryBundle and yields null (no injection).
     // If an in-chat reset paused injection, skip the fetch entirely until the
     // next summarization cycle clears the guard.
+    
     const memoryFetchPaused = characterId ? isMemoryInjectionPaused(characterId) : false;
+    console.log("[memory] fetch gate check:", { chatMode, characterId, userIdLocal, hasCharacter: characterId ? MEMORY_CHARACTERS.has(characterId) : false, incognito: profile.preferences.incognito, memoryFetchPaused });
+    
     if (memoryFetchPaused) {
       console.log("[memory] injection paused — skipping fetch");
       memoryBundleRef.current = null;
@@ -901,6 +904,8 @@ const Chat = () => {
       !profile.preferences.incognito
     ) {
       const fetchedMemoryBundle = await fetchMemoryBundle(userIdLocal, characterId, trimmed);
+      console.log("[memory] bundle fetched:", JSON.stringify(fetchedMemoryBundle));
+
       if (isMemoryInjectionPaused(characterId)) {
         console.log("[memory] injection paused — skipping fetched bundle");
         memoryBundleRef.current = null;
