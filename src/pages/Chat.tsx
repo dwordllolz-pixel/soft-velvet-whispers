@@ -1155,6 +1155,11 @@ const Chat = () => {
         // Phase 4 — Memory: bump qualifying-exchange counter; fire summarization
         // every 5 qualifying exchanges (event weight > 0.2). Background only —
         // never blocks chat. Logs are required for testing.
+        console.log("[memory] summarize check", {
+          weight,
+          counter: memoryCounterRef.current.count,
+        });
+        
         if (
           chatMode === "character" &&
           MEMORY_CHARACTERS.has(characterId) &&

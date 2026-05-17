@@ -98,12 +98,33 @@ serve(async (req) => {
             { role: "system", content: narrativePrompt },
             { role: "user", content: dialogue },
           ],
-          max_tokens: 150,
+          max_completion_tokens: 300,
         }),
       });
       if (r.ok) {
         const j = await r.json();
+
+        console.log(
+          "[summarize-memory] raw narrative response:",
+          JSON.stringify(j, null, 2)
+        );
+
+        console.log(
+          "[summarize-memory] finish reason:",
+          j.choices?.[0]?.finish_reason
+        );
+
         narrativeState = (j.choices?.[0]?.message?.content ?? "").trim();
+
+        console.log(
+          "[summarize-memory] extracted narrative:",
+          narrativeState
+        );
+
+        console.log(
+          "[summarize-memory] narrative length:",
+          narrativeState.length
+        );
       } else {
         console.error("[summarize-memory] narrative gateway error", r.status);
       }
@@ -112,12 +133,19 @@ serve(async (req) => {
     }
 
     if (narrativeState) {
+      const memoryPayload = {
+        user_id: userId,
+        character_id: characterId,
+        narrative_state: narrativeState,
+        memory_text: narrativeState,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error: upErr } = await supabase
         .from("character_memory")
-        .upsert(
-          { user_id: userId, character_id: characterId, narrative_state: narrativeState, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,character_id" },
-        );
+        .upsert(memoryPayload, {
+          onConflict: "user_id,character_id",
+        });
       if (upErr) console.error("[summarize-memory] memory upsert error", upErr);
     }
 
@@ -164,7 +192,7 @@ serve(async (req) => {
                 { role: "system", content: milestonePrompt },
                 { role: "user", content: dialogue },
               ],
-              max_tokens: 80,
+              max_completion_tokens: 80,
             }),
           }
         );
@@ -292,7 +320,7 @@ serve(async (req) => {
             { role: "system", content: prefPrompt },
             { role: "user", content: dialogue },
           ],
-          max_tokens: 200,
+          max_completion_tokens: 200,
           response_format: {
             type: "json_object",
           },
