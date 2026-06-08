@@ -82,7 +82,34 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
 
     // ---- Layer 1: Narrative state (rewrite) ----
-    const narrativePrompt = `Summarize the emotional texture of this conversation in 2–3 sentences. Focus on how the interaction felt, not what was discussed. Avoid concrete nouns unless they describe emotional behavior. Do not mention specific topics, events, or facts. If you find yourself writing a noun that refers to a topic rather than an emotion, rewrite it. Return only the summary. No preamble.`;
+    const narrativePrompt = `You are writing long-term memory for an AI companion character system.
+
+Your output will be read by the character in future conversations to remember what happened.
+
+Write 2-3 sentences in past tense. Record what occurred between the user and the character — not the character's personality or writing style.
+
+Structure your answer around:
+1. What the user did or said (their behavior, not just their words)
+2. How the character actually responded
+3. What shifted in the relationship as a result
+
+Bad (character analysis — DO NOT do this):
+"The character maintained a steady and composed demeanor."
+
+Bad (atmosphere — DO NOT do this):
+"The exchange carried a quiet tenderness and emotional weight."
+
+Good (what actually happened):
+"The user pushed for emotional honesty and closed physical distance deliberately. The character responded with measured openness, acknowledging the user's directness rather than deflecting. The interaction moved from polite tension into something more personally engaged."
+
+Rules:
+- Past tense only
+- No poetry, no atmosphere, no prose style
+- No incomplete sentences
+- Record events and changes, not personality traits
+- If nothing meaningful happened, write: The conversation was casual with no significant relational development.
+
+Return ONLY the memory. No labels, no preamble.`;
 
     let narrativeState = "";
     try {
@@ -98,7 +125,7 @@ serve(async (req) => {
             { role: "system", content: narrativePrompt },
             { role: "user", content: dialogue },
           ],
-          max_completion_tokens: 300,
+          max_completion_tokens: 150,
         }),
       });
       if (r.ok) {
@@ -132,7 +159,7 @@ serve(async (req) => {
       console.error("[summarize-memory] narrative error", e);
     }
 
-    if (narrativeState) {
+    if (narrativeState && narrativeState.length >= 40 && /[.!?]$/.test(narrativeState.trim())) {
       const memoryPayload = {
         user_id: userId,
         character_id: characterId,
@@ -147,6 +174,8 @@ serve(async (req) => {
           onConflict: "user_id,character_id",
         });
       if (upErr) console.error("[summarize-memory] memory upsert error", upErr);
+    } else if (narrativeState) {
+      console.warn("[memory] rejected malformed summary — too short", narrativeState);
     }
 
     // ---- Layer 2: Milestone (only if weight high) ----
@@ -265,14 +294,16 @@ serve(async (req) => {
           }
 
           const { error: insErr } = await supabase
-            .from("character_milestones")
-            .insert({
-              user_id: userId,
-              character_id: characterId,
-              emotional_summary: summary,
-              emotional_weight: weight,
-              times_referenced: 0,
-            });
+          .from("character_milestones")
+          .insert({
+            user_id: userId,
+            character_id: characterId,
+            milestone_type: "emotional",
+            milestone_text: summary,
+            emotional_summary: summary,
+            emotional_weight: weight,
+            times_referenced: 0,
+          });
           if (insErr) console.error("[summarize-memory] milestone insert error", insErr);
         }
       }
@@ -306,6 +337,7 @@ serve(async (req) => {
         {
           "preferences": []
         }
+        IMPORTANT: Return ONLY valid JSON. No explanations. No markdown. No code fences.
         `;
 
       const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -321,9 +353,6 @@ serve(async (req) => {
             { role: "user", content: dialogue },
           ],
           max_completion_tokens: 200,
-          response_format: {
-            type: "json_object",
-          },
         }),
       });
 
@@ -331,7 +360,8 @@ serve(async (req) => {
         const j = await r.json();
         const argsStr = j.choices?.[0]?.message?.content;
         if (argsStr) {
-          const parsed = JSON.parse(argsStr);
+          const cleaned = argsStr.replace(/```json\n?|```\n?/g, "").trim();
+          const parsed = JSON.parse(cleaned);
           const newPrefs: string[] = Array.isArray(parsed?.preferences) ? parsed.preferences : [];
 
           const { data: currentPrefs } = await supabase

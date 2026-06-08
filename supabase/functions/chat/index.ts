@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_MESSAGES = 50;
+const MAX_MESSAGES = 60;
 const MAX_TOTAL_CHARS = 80_000;
 const MAX_SYSTEM_PROMPT_CHARS = 20_000;
 

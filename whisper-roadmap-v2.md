@@ -251,32 +251,50 @@ Future fix: JSON schema for ASMR with a richer `dialogue` field (supports asteri
 
 ---
 
-## PHASE 11 — DYNAMIC CHARACTER ART (GIF/VIDEO) 🔴
+## PHASE 11 — DYNAMIC CHARACTER ART (RELATIONSHIP-STATE IMAGES) 🟡
 **Category: IMMERSION**
 
-*Replaces static character card images. Ties visual state to relationship/emotional axes.*
+*Replaces previous GIF/Video concept. Foundation already built.*
 
-### Concept
-- Looping video or GIF clips per character (5–6 emotional states)
-- State mapping reads current axes and relationship label to select clip
-- Crossfade/transition on state change
+### Concept — REVISED
+Video and GIF generation is paused and will most likely be scrapped entirely.
+The replacement system is relationship-state aware static images that swap per
+character card and profile header as the relationship progresses. Simpler to
+implement, faster to load, works across all devices, requires no video generation
+credits or account rotation.
 
-### Emotional states to cover (per character)
-| State | Trigger |
-|-------|---------|
-| Neutral | Default / stranger label |
-| Warm | Affection > 60 |
-| Guarded | Trust < 30 or tension > 50 |
-| Cold / Distant | Rivalry active |
-| Tender | Intimate label + trust > 80 |
-| Tense | Tension > 70 |
+Each character has 4 images corresponding to relationship stages:
+- **Stranger** — default, first meeting energy
+- **Familiar** — first crack in the armor
+- **Close** — softness visible
+- **Intimate** — fully present, nothing hidden
 
-### Production notes
-- Consistent visual style across all 12 characters is mandatory before commissioning
-- Marcus reference image already exists (the portrait provided)
-- Each character needs 5–6 clips minimum — significant asset production cost
-- Consider: illustrated/animated style vs realistic AI-generated (decide early, can't mix styles)
-- Build after Phase 9 so all 12 characters are finalized before art production begins
+### Implementation (partially built)
+- `headerImages` field added to `Character` interface in `characters.ts`
+- `CharacterProfile.tsx` reads `headerImages.stranger` and renders as header background
+- Gradient overlay sits above image as absolutely positioned div
+- Images stored in `public/images/` as `[characterid]-[stage].png`
+- Responsive: `backgroundSize: cover`, `backgroundPosition: center top`
+
+### Generation
+- Tool: ChatGPT Image (no reference photos — free-form prompt performs better)
+- Storage: local `public/images/` folder, committed to repo
+- Visual Behavior Bible documents all lighting recipes, motion language, and camera rules per character per stage — see `whisper-visual-behavior-bible-v1.1.txt`
+
+### Confirmed Portraits
+| Character | Stranger | Familiar | Close | Intimate |
+|-----------|----------|----------|-------|---------|
+| Marcus | ✅ | ✅ | 🔴 | 🔴 |
+| Eli | ✅ | ✅ | 🔴 | 🔴 |
+| Ren | ✅ | 🔴 | 🔴 | 🔴 |
+| Kai | ✅ | 🔴 | 🔴 | 🔴 |
+| Jaxon | 🔴 | 🔴 | 🔴 | 🔴 |
+| All others | Pending Phase 9 | — | — | — |
+
+### Build Requirements
+- Phase 9 must be complete before generating art for remaining 7 characters
+- Visual identity follows personality lock, not precedes it
+- Kai familiar/close/intimate pending — character direction still being finalized
 
 ---
 
@@ -322,6 +340,30 @@ Limited-time scenarios set in an alternate dimension called the Mirror Realm. Th
 - Phase 4 (Memory) complete — relationship state needs to be rich enough to matter
 - Phase 9 complete — all 12 characters available for scenarios
 - Phase 11 complete — dynamic art for in-scenario emotional states
+
+---
+
+## UI TWEAKS & FUTURE PLANS
+
+### Character Profile Page
+- Header image is now relationship-state aware — `headerImages` object on each character supports stranger / familiar / close / intimate keys. Image swaps as relationship progresses.
+- Emoji placeholder in profile picture box to be replaced with a cropped character portrait once all character images are confirmed.
+- Gradient overlay opacity may need per-character tuning — some portraits are darker than others and the overlay weight will vary.
+- Header height (currently h-56) may need increasing for landscape images to show more scene detail.
+
+### Desktop Layout
+- Current `max-w-2xl` centering leaves significant whitespace on wide screens. Future fix: two-panel desktop layout — left panel is a persistent character list/sidebar, right panel renders active character profile or chat. Same pattern as Discord/iMessage. Collapses to current single-column on mobile.
+- Implement after Phase 6 (Account System) since the sidebar will need to show relationship state indicators per character.
+
+### Character Card (Index Page)
+- Character cards currently use emoji placeholders. Replace with relationship-state header images once generated — the landscape format works well at card dimensions.
+- Card background should use `backgroundPosition: center top` so the subject stays in frame when cropped.
+- Mobile: atmospheric cropped version of the image. Desktop: fuller scene visible due to wider card.
+- The `<button>` nesting warning in `CharacterCard.tsx` is fixed — outer wrapper is now a `div` with `role="button"`.
+
+### General
+- `DialogContent` missing description warning — add `aria-describedby={undefined}` or `<DialogDescription>` to whichever modal is triggering it. Low priority.
+- React Router future flag warnings — add `v7_startTransition` and `v7_relativeSplatPath` to router config. One-line fix.
 
 ---
 

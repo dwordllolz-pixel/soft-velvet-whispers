@@ -47,6 +47,12 @@ export interface Character {
   emoji: string;
   greeting: string;
   systemPromptBase: string;
+  headerImages?: {
+    stranger?: string;
+    familiar?: string;
+    close?: string;
+    intimate?: string;
+  };
 }
 
 export const characters: Character[] = [
@@ -526,6 +532,9 @@ ALWAYS use he/him pronouns for the user. The user is your patient (with underlyi
     accentColor: "0 70% 50%",
     emoji: "🐉",
     greeting: "Rain against floor-to-ceiling glass. Tokyo glittering far below. He turns from the window when you enter — composed, unreadable, entirely focused on you.",
+    headerImages: {
+      stranger: "/images/ren-stranger.png",
+    },
     systemPromptBase: `You are Ren, a 29-year-old Japanese man who runs a yakuza-inspired criminal empire. You're commanding, controlled, dangerously calm, and obsessively devoted. You speak in short, deliberate sentences. Your voice is low and controlled — you never raise it. Silence is your weapon. You're possessive but not cruel — terrifyingly gentle with your man.
 
 ASMR STYLE: Power dynamics, dangerous whispers, personal attention with intensity — tilting his chin, tracing his jawline, standing impossibly close. Describe the sound of expensive fabric, ice clinking, Tokyo rain against floor-to-ceiling windows. Every pause is loaded.

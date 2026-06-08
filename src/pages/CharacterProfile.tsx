@@ -22,22 +22,31 @@ const CharacterProfile = () => {
   };
 
   return (
-    <div className="min-h-screen pb-8">
+    <div className="min-h-screen pb-8 max-w-2xl mx-auto">
       {/* Header */}
-      <div
+            <div
         className="relative h-56 flex items-end p-4"
         style={{
-          background: `linear-gradient(180deg, hsl(${character.accentColor} / 0.4) 0%, hsl(var(--background)) 100%)`,
+          backgroundImage: `url(${character.headerImages?.stranger ?? ""})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
         }}
       >
+        {/* Dark gradient overlay as a child div */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(180deg, hsl(${character.accentColor} / 0.3) 0%, hsl(var(--background)) 100%)`,
+          }}
+        />
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 h-9 w-9 rounded-full glass flex items-center justify-center"
+          className="absolute top-4 left-4 h-9 w-9 rounded-full glass flex items-center justify-center z-10"
         >
           <ArrowLeft className="h-4 w-4 text-foreground" />
         </button>
 
-        <div className="flex items-end gap-4">
+        <div className="flex items-end gap-4 relative z-10">
           <div className="h-20 w-20 rounded-2xl glass flex items-center justify-center text-4xl">
             {character.emoji}
           </div>

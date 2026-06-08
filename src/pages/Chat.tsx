@@ -760,7 +760,7 @@ const Chat = () => {
       return mergeCategoryFloor(floor, "light_vulnerability");
     }
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
       const resp = await fetch(
@@ -852,9 +852,20 @@ const Chat = () => {
     // Sanitize. For a fresh conversation `messages` is empty, so this becomes
     // exactly [{ role: "user", content: trimmed }] — the user's first turn is
     // the true conversational start. The empty-history case is NOT an error.
-    const apiMessages = sanitizeApiMessages(
-      newMessages.map((m) => ({ role: m.role, content: m.content })),
-    );
+    const cleanedMessages = newMessages
+  .map((m) => ({ role: m.role, content: m.content }))
+  .filter((m) => {
+    if (m.role !== "assistant") return true;
+    const content = m.content?.trim() ?? "";
+    const looksLikeBrokenJson =
+      content.startsWith("{") &&
+      !content.includes('"action"') &&
+      !content.includes('"thought"') &&
+      !content.endsWith("}");
+    return !looksLikeBrokenJson;
+  });
+
+const apiMessages = sanitizeApiMessages(cleanedMessages);
 
     // Only abort if there is genuinely no user message after sanitization.
     // An empty prior history is fine — the new user message is appended above.
@@ -864,6 +875,10 @@ const Chat = () => {
       inFlightRef.current = false;
       return;
     }
+
+    console.log("[debug] apiMessages:", JSON.stringify(apiMessages));
+    console.log("[debug] apiMessages count:", apiMessages.length);
+    console.log("[debug] last message role:", apiMessages[apiMessages.length - 1]?.role);
 
     // Defensive: if sanitization left us with no valid user-terminated turn,
     // bail out rather than letting the model reply to its own greeting.
