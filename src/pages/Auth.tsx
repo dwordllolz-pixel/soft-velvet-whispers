@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Headphones, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import { Headphones, Mail, Lock, User, ArrowRight, Loader2, UserCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
@@ -14,7 +14,7 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signInAsGuest } = useAuth();
 
   useEffect(() => {
     if (user) navigate("/", { replace: true });
@@ -64,6 +64,17 @@ const Auth = () => {
     }
   };
 
+  const handleGuestAuth = async () => {
+    setLoading(true);
+    try {
+      await signInAsGuest();
+      // onAuthStateChange will fire and set user, which triggers the useEffect redirect
+    } catch (err: any) {
+      toast.error("Couldn't start guest session. Please try again.");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <motion.div
@@ -91,7 +102,7 @@ const Auth = () => {
           <button
             onClick={handleGoogleAuth}
             disabled={loading}
-            className="w-full glass rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:bg-white/10 transition-colors mb-4"
+            className="w-full glass rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:bg-white/10 transition-colors mb-3"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -102,7 +113,7 @@ const Auth = () => {
             Continue with Google
           </button>
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 h-px bg-border/50" />
             <span className="text-xs text-muted-foreground">or</span>
             <div className="flex-1 h-px bg-border/50" />
@@ -173,12 +184,14 @@ const Auth = () => {
           </p>
         </div>
 
-        {/* Skip option */}
+        {/* Guest option — explicit choice, not a skip */}
         <button
-          onClick={() => navigate("/")}
-          className="mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto block"
+          onClick={handleGuestAuth}
+          disabled={loading}
+          className="mt-4 w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
-          Continue without an account →
+          <UserCircle2 className="h-3.5 w-3.5" />
+          Continue as Guest · Save your progress by creating an account
         </button>
       </motion.div>
     </div>

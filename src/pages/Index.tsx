@@ -6,6 +6,7 @@ import CharacterCard from "@/components/CharacterCard";
 import CategoryFilter from "@/components/CategoryFilter";
 import { Bug, Headphones, User, LogOut, Heart, Clock, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAdminDebug } from "@/hooks/useAdminDebug";
 
@@ -13,7 +14,11 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<ASMRType | null>(null);
   const [showFavOnly, setShowFavOnly] = useState(false);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) navigate("/auth", { replace: true });
+  }, [user, loading, navigate]);
   const { favoriteIds, toggleFavorite } = useFavorites();
   const { canDebug } = useAdminDebug();
 

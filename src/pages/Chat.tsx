@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Heart } from "lucide-react";
 import { getCharacter, getASMRCategory, type ASMRType } from "@/data/characters";
@@ -266,6 +266,7 @@ const TIER_CYCLE: NsfwLevel[] = ["sfw", "suggestive", "explicit"];
 
 const Chat = () => {
   const { characterId, asmrType } = useParams<{ characterId: string; asmrType?: string }>();
+  const navigate = useNavigate();
   const character = getCharacter(characterId || "");
   const category = asmrType ? getASMRCategory(asmrType as ASMRType) : null;
   // chatMode is derived directly from the route. No asmrType => pure character chat.
@@ -896,7 +897,7 @@ const apiMessages = sanitizeApiMessages(cleanedMessages);
       console.warn("[chat] sign-in required to send messages");
       setIsLoading(false);
       inFlightRef.current = false;
-      window.location.hash = "#/auth";
+      navigate("/auth");
       return;
     }
 
