@@ -12,7 +12,7 @@ interface AuthContextType {
   /** Explicitly start a guest session. Only called when user clicks "Continue as Guest". */
   signInAsGuest: () => Promise<void>;
 }
-
+// using this for a commit
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
