@@ -15,7 +15,7 @@ import Settings from "./pages/Settings.tsx";
 import AdminDebug from "./pages/AdminDebug.tsx";
 
 const queryClient = new QueryClient();
-
+// useless commit 2
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>

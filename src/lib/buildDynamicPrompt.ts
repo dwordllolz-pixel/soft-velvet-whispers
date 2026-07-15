@@ -3,6 +3,8 @@ export interface DynamicPromptParams {
     emotionalState: string;
     recentMemory?: string;
     avoidPatterns?: string[];
+    /** Phase 5 — optional pre-built rivalry block (already trimmed to short form if needed). */
+    rivalryBlock?: string;
   }
   
   export function buildDynamicPrompt({
@@ -10,6 +12,7 @@ export interface DynamicPromptParams {
     emotionalState,
     recentMemory,
     avoidPatterns = [],
+    rivalryBlock,
   }: DynamicPromptParams): string {
     const memoryBlock = recentMemory
       ? `\nRECENT MEMORY:\n${recentMemory}`
@@ -19,6 +22,10 @@ export interface DynamicPromptParams {
       avoidPatterns.length > 0
         ? `\nAVOID REPEATING:\n${avoidPatterns.map((p) => `- ${p}`).join("\n")}`
         : "";
+
+    const rivalryPromptBlock = rivalryBlock?.trim()
+      ? `\nRIVALRY:\n${rivalryBlock.trim()}`
+      : "";
   
     return `
   RELATIONSHIP:
@@ -28,6 +35,7 @@ export interface DynamicPromptParams {
   ${emotionalState}
   ${memoryBlock}
   ${avoidBlock}
+  ${rivalryPromptBlock}
   
   RESPONSE LENGTH:
   - casual input → 1-3 sentences

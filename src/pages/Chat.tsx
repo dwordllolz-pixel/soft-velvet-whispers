@@ -25,7 +25,6 @@ import {
   tickDailyCount,
   type EventCategory,
 } from "@/lib/relationshipAxes";
-import { buildDynamicPromptBlock } from "@/lib/promptInjection";
 import {
   buildRivalryPromptBlock,
   bumpRivalryTurns,
@@ -421,89 +420,6 @@ const Chat = () => {
     );
   }
 
-  const buildLegacySystemPrompt = () => {
-    // Phase 5 — Rivalry: build block only in character mode and when not incognito.
-    let rivalryBlockText = "";
-    let rivalryShortText: string | undefined;
-    rivalryTriggeredCooldownRef.current = false;
-    if (chatMode === "character" && characterId && !profile.preferences.incognito) {
-      const rb = buildRivalryPromptBlock(
-        characterId,
-        characterState.rivalry_state,
-        profile,
-      );
-      rivalryBlockText = rb.text;
-      if (rb.text) {
-        rivalryShortText = rb.short || undefined;
-        console.log(`[rivalry] injecting block for ${characterId}`);
-      }
-      rivalryTriggeredCooldownRef.current = rb.triggeredCooldown;
-    }
-
-    const dynamic = buildDynamicPromptBlock({
-      characterState,
-      nsfwLevel: sessionTier,
-      boundaries: profile.preferences.boundaries,
-      domSub,
-      characterId,
-      chatMode,
-      rivalryBlock: rivalryBlockText,
-      rivalryBlockShort: rivalryShortText,
-    });
-
-    const characterBaseline = ""; // BASELINE PROFILE — to be added per-character in a future pass.
-
-    const scenarioContext = category
-      ? `SCENARIO CONTEXT: ${category.label} — ${category.description}`
-      : "";
-
-    const modeBlock = chatMode === "character" ? CHARACTER_MODE_RULES : ASMR_MODE_RULES;
-    const contextBlock = chatMode === "character" ? characterBaseline : scenarioContext;
-
-    // Phase 4 — Memory: prepend relationship memory block (character mode only).
-    if (chatMode === "character" && characterId && isMemoryInjectionPaused(characterId)) {
-      return [
-        CORE_RULES,
-        modeBlock,
-        contextBlock,
-        character.systemPromptBase,
-        dynamic,
-      ]
-        .filter((s) => s && s.trim().length > 0)
-        .join("\n\n");
-    }
-
-    const memoryBlock =
-      chatMode === "character" ? buildMemoryBlock(memoryBundleRef.current, characterId) : "";
-
-    if (chatMode === "character" && characterId && isMemoryInjectionPaused(characterId)) {
-      return [
-        CORE_RULES,
-        modeBlock,
-        contextBlock,
-        character.systemPromptBase,
-        dynamic,
-      ]
-        .filter((s) => s && s.trim().length > 0)
-        .join("\n\n");
-    }
-
-    if (memoryBlock.length > 0) {
-      console.log("[memory] injecting block:", memoryBlock);
-    }
-
-    return [
-      !characterId || !isMemoryInjectionPaused(characterId) ? memoryBlock : "",
-      CORE_RULES,
-      modeBlock,
-      contextBlock,
-      character.systemPromptBase,
-      dynamic,
-    ]
-      .filter((s) => s && s.trim().length > 0)
-      .join("\n\n");
-  };
-
   const cycleTier = () => {
     const idx = TIER_CYCLE.indexOf(sessionTier);
     setSessionTier(TIER_CYCLE[(idx + 1) % TIER_CYCLE.length]);
@@ -525,6 +441,18 @@ const Chat = () => {
     characterId && !isMemoryInjectionPaused(characterId)
       ? buildMemoryBlock(memoryBundleRef.current, characterId)
       : undefined;
+
+  // Phase 5 — Rivalry: build block only in character mode and when not incognito.
+  rivalryTriggeredCooldownRef.current = false;
+  let rivalryInjection: string | undefined;
+  if (chatMode === "character" && characterId && !profile.preferences.incognito) {
+    const rb = buildRivalryPromptBlock(characterId, characterState.rivalry_state, profile);
+    if (rb.text) {
+      rivalryInjection = rb.text;
+      console.log(`[rivalry] injecting block for ${characterId}`);
+    }
+    rivalryTriggeredCooldownRef.current = rb.triggeredCooldown;
+  }
 
     const assembledSystemPrompt = buildSystemPrompt({
       characterId: characterId ?? "eli",
@@ -575,6 +503,8 @@ const Chat = () => {
             .filter((m) => m.role === "assistant")
             .map((m) => m.content)
         ),
+
+        rivalryBlock: rivalryInjection,
       },
     });
     console.log("[debug] imported builder result:", assembledSystemPrompt);
@@ -650,7 +580,7 @@ const Chat = () => {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: streamEnabled });
+      buffer += decoder.decode(value, { stream: true });
 
       let idx: number;
       while ((idx = buffer.indexOf("\n")) !== -1) {
