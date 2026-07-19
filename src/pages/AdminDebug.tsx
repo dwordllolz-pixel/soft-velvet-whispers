@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Bug, Copy, Database, FileWarning, KeyRound, LineChart, MessageSquare, Save, Shield, SlidersHorizontal, UserCog } from "lucide-react";
 import { characters } from "@/data/characters";
 import { useAdminDebug, type AdminChatMessage, type AdminChatSession, type AdminRole, type AdminUserRow } from "@/hooks/useAdminDebug";
+import { RELATIONSHIP_THRESHOLDS } from "@/lib/relationshipAxes";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,6 +185,15 @@ const AdminDebug = () => {
             </div>
             <Button onClick={saveRelationship} className="w-full"><Save className="h-4 w-4" /> Save debug state</Button>
             {status && <p className="text-sm text-muted-foreground">{status}</p>}
+            <div className="rounded-lg border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Main ladder thresholds (main-ladder only — reads from RELATIONSHIP_THRESHOLDS, same source deriveRelationshipResult() uses for both label and reasoning)</p>
+              <p>stranger → acquaintance: affection &amp; trust ≥ {RELATIONSHIP_THRESHOLDS.acquaintance}</p>
+              <p>acquaintance → getting close: &gt; {RELATIONSHIP_THRESHOLDS.gettingClose}</p>
+              <p>getting close → close: &gt; {RELATIONSHIP_THRESHOLDS.close} (and tension &lt; 30)</p>
+              <p>close → intimate: &gt; {RELATIONSHIP_THRESHOLDS.intimate}</p>
+              <p>intimate → devoted: affection &amp; trust &gt; 70, message_count &gt; 100 (unchanged — see RELATIONSHIP_STATE_V2.md Section 7, devoted's gate is pending the multi-day sustain redesign, not a simple rescale)</p>
+              <p className="italic pt-1">Recalibrated July 2026 — provisional until Character Completion. See RELATIONSHIP_STATE_V2.md for full reasoning. Branch states (FWB/situationship/complicated/ex) not shown here — dormant V3 functionality, thresholds unchanged.</p>
+            </div>
           </div>
 
           <div className="glass rounded-xl p-4 space-y-3">

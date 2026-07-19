@@ -332,3 +332,23 @@ export async function deleteAllMemory(userId: string): Promise<void> {
   if (ms.error) throw ms.error;
   if (p.error) throw p.error;
 }
+
+/**
+ * Per-character counterpart to deleteAllMemory. Added July 2026 to enforce
+ * the Relationship State V2 reset invariant (RELATIONSHIP_STATE_V2.md,
+ * Section 4): every representation of a relationship must reset together.
+ * Previously, only an account-wide memory wipe existed — the per-character
+ * "Reset Conversation" flow in Chat.tsx had no way to clear just one
+ * character's memory rows, which is exactly how axes and memory narrative
+ * ended up able to diverge for a single character.
+ */
+export async function deleteCharacterMemory(userId: string, characterId: string): Promise<void> {
+  const [m, ms, p] = await Promise.all([
+    supabase.from("character_memory").delete().eq("user_id", userId).eq("character_id", characterId),
+    supabase.from("character_milestones").delete().eq("user_id", userId).eq("character_id", characterId),
+    supabase.from("character_preferences").delete().eq("user_id", userId).eq("character_id", characterId),
+  ]);
+  if (m.error) throw m.error;
+  if (ms.error) throw ms.error;
+  if (p.error) throw p.error;
+}

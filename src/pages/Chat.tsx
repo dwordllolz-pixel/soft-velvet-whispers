@@ -33,6 +33,7 @@ import {
 } from "@/lib/rivalry";
 import {
   buildMemoryBlock,
+  deleteCharacterMemory,
   fetchMemoryBundle,
   fireSummarization,
   isMemoryInjectionPaused,
@@ -1153,13 +1154,22 @@ const apiMessages = sanitizeApiMessages(cleanedMessages);
     try {
       await deleteCharacterSessions(characterId);
       await resetCharacterState(characterId);
-      // Memory tables (narrative, milestones, preferences) are intentionally
-      // preserved here — but pause injection so old memory does not bleed
-      // into the fresh conversation until a new summarization cycle runs.
+      // Relationship State V2 invariant (RELATIONSHIP_STATE_V2.md, Section 4):
+      // every representation of the relationship must reset together. This
+      // used to preserve character_memory/milestones/preferences while
+      // wiping axes — the exact divergence that caused the "stuck at
+      // stranger while memory describes an established relationship" bug
+      // this whole spec was written to fix. Now resets both, in the same
+      // flow, unconditionally.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userIdLocal = sessionData.session?.user?.id ?? null;
+      if (userIdLocal) {
+        await deleteCharacterMemory(userIdLocal, characterId);
+      }
       pauseMemoryInjection(characterId);
       memoryBundleRef.current = null;
       memoryCounterRef.current.count = 0;
-      console.log("[memory] injection paused — awaiting new cycle");
+      console.log("[memory] injection paused — memory reset alongside axes");
       setMessages([]);
       setShowGreetingCard(true);
     } catch (e) {

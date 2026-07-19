@@ -8,6 +8,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useChatHistory } from "@/hooks/useChatHistory";
 import { getCharacter } from "@/data/characters";
 import { deleteAllMemory } from "@/lib/memory";
+import { RELATIONSHIP_THRESHOLDS } from "@/lib/relationshipAxes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -58,7 +59,7 @@ const Settings = () => {
     for (const [id, st] of Object.entries(profile.characters)) {
       if (!st) continue;
       const score = st.affection + st.trust;
-      if (st.affection > 60 && st.trust > 60 && (!best || score > best.score)) {
+      if (st.affection > RELATIONSHIP_THRESHOLDS.close && st.trust > RELATIONSHIP_THRESHOLDS.close && (!best || score > best.score)) {
         best = { id, score };
       }
     }
