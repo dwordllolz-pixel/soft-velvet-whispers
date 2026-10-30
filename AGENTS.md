@@ -77,8 +77,7 @@ Before changing an existing system:
 
 For prompt, memory, relationship, character, and chat changes, be especially careful to preserve existing behavioral continuity.
 
-Do not make database schema changes, Supabase migrations, RLS changes, or production deployments without explicit approval.
-
+- Do not make database schema changes, Supabase migrations, RLS changes, or production deployments without explicit approval.
 - Do not modify NSFW tier logic, boundary/safety content, or the server-authoritative override block without explicit approval. This logic is intentionally server-side and safety-relevant, not a refactoring target.
 
 ## 7. Validation and reporting
