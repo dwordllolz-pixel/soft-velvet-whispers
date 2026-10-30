@@ -10,7 +10,7 @@ The repository contains project documentation, including:
 
 - `ARCHITECTURE.md`
 - `KNOWN_ISSUES.md`
-- `whisper-roadmap-v4 (3)(1).md`
+- `whisper-roadmap-v4.md`
 
 These documents provide useful context, but may not reflect the latest implementation. Check the actual code before making technical claims or proposing changes.
 
