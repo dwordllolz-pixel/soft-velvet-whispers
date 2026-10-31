@@ -1,5 +1,6 @@
-# WHISPER APP — SYSTEM ROADMAP v4
-*Last updated: July 19, 2026*
+# WHISPER APP — SYSTEM ROADMAP v5
+*Last updated: October 31, 2026*
+*Working source: July 27, 2026 v4 roadmap, updated to preserve the Mirror Realm concept history and current development workflow.*
 *Rebased on verified codebase state, not assumptions. Every item below was checked
 against actual source, not inferred from memory of prior sessions.*
 
@@ -23,9 +24,61 @@ during the Relationship State design process, and this section exists so
   gate redesign
 
 Nothing else begins until Character Completion review is underway. See
-Phase 4.6 below for full detail.
+Phase 4.6 below for full detail. UI V1 work is being handled as a separate,
+bounded workstream and does not change the sequencing of the core roadmap.
 
 ---
+
+## DEVELOPMENT WORKFLOW — CURRENT TOOLS
+
+*Added October 2026. This records the current development environment and
+planned expansion of the workflow; it does not change feature priorities or
+grant tools permission to make unapproved changes.*
+
+### Primary environment — Google Antigravity
+
+Google Antigravity is the current primary development IDE for Whisper.
+
+Current use:
+- Inspect and understand the existing implementation.
+- Explore UI/UX direction and assess the current experience.
+- Prepare implementation plans before modifying files.
+- Implement narrowly scoped, explicitly approved tasks.
+- Review and validate changes within the agreed task scope.
+
+Antigravity must follow the repository's `AGENTS.md` guidance. The user is
+the product owner and final decision-maker. Before modifying files, the
+agent must present the problem, affected files, proposed changes, risks and
+validation plan for review. No unrelated refactors, redesigns, migrations,
+database changes, deployments, merges or pushes to `main` without explicit
+approval.
+
+Work should use dedicated feature branches created from the agreed base
+branch. Keep changes focused and reviewable. Report actual test/build results
+and manual checks separately; do not claim behavior is verified solely
+because a build succeeds.
+
+### Future coding environment — OpenAI Codex
+
+Codex is planned as a future addition to the development workflow, not a
+replacement for Antigravity.
+
+When introduced, Codex may be used for bounded implementation tasks,
+independent code review, or a second technical perspective. Its use will be
+integrated deliberately after the Antigravity workflow is established.
+Agents must not edit the same working tree concurrently; use separate
+branches or worktrees for independent work. The user retains approval over
+plans, changes, commits, merges and deployments.
+
+### Current UI workstream — UI V1
+
+UI revitalization is an active, incremental workstream focused on improving
+the existing interface without prematurely locking the product's permanent
+name, logo or visual identity. The current approach is to make focused,
+visible improvements to usability, layout, responsiveness, consistency and
+accessibility while preserving existing functionality. The emerging Mirror
+Realm aesthetic and worldbuilding are being explored separately and do not
+automatically authorize a full application redesign.
 
 ## WHAT CHANGED SINCE v3
 
@@ -106,10 +159,23 @@ actual bottleneck the whole time — not memory, not characters.*
 - ✅ Google Cloud OAuth client: Authorized JavaScript origins + Supabase
   redirect URI both correctly configured for local + production
 
-### Known non-issues (don't touch)
-- `permission denied for function has_role` console warning — cosmetic,
-  gracefully handled, not application logic (confirmed: only appears in
-  auto-generated Supabase types, not called anywhere in `src/`)
+### Corrected assessment (July 2026)
+~~`permission denied for function has_role` console warning — cosmetic,
+gracefully handled, not application logic~~ — **this assessment was wrong,
+found via direct migration-file audit.** The warning was never cosmetic:
+migration `20260429145118` moved `has_role`/`is_admin_or_debugger` into a
+new `private` schema and rewrote every dependent RLS policy (`user_roles`,
+`users`, `profiles`, `admin_invite_redemptions`) to call the `private.`
+versions — then the very next migration (`20260429145202`) revoked execute
+on those `private.` functions from `authenticated` with no re-grant ever
+added. Every role check has been silently throwing and getting swallowed
+by `useAdminDebug.ts`'s `reloadRoles()` catch block (which sets `roles =
+[]` on any error) since that migration shipped — meaning `canDebug` was
+unreachable for every account, including confirmed admin rows in
+`user_roles`, regardless of table contents. Not a frontend bug, not an
+invite-code problem — fixed via a new migration re-granting execute on
+both `private.` functions to `authenticated`. Confirmed working after
+the fix was applied.
 
 ### Deferred from this phase
 - 🔴 Anonymous → Google/Email identity linking (`linkIdentity()`) so guest
@@ -153,7 +219,7 @@ now closed.*
 | 9 | Remaining Characters | CORE | 🟡 3 tiers, unchanged this pass |
 | 10 | ASMR JSON Parsing | CORE | 🔴 Not started |
 | 11 | Dynamic Character Art | IMMERSION | 🟡 In progress, bottleneck is generation quality not code |
-| 12 | Mirror Realm | FLUFF | 🔴 Superseded — see Phase 13 |
+| 12 | Mirror Realm | FLUFF | 🟡 Permanent future feature — concept revived and expanded; see Future Ideas |
 | 13 | Travel / Passport / Seasonal Destinations | FLUFF | 💡 Refined this pass (event role as separate layer, pen-pal retention) — see Future Ideas |
 | 14 | Voice & Monetization | — | 💡 Explicitly deferred to 2027 |
 
@@ -433,10 +499,130 @@ completion status. Raven/Vincent art still needed before demo-ready.
 
 ## FUTURE IDEAS — EXPLICITLY NOT IN SCOPE YET
 
+*Reorganized July 2026 into four buckets — CORE FEATURE, IMMERSION, FLUFF,
+CHARACTER-SPECIFIC — using the same category definitions as the rest of
+this roadmap (see FEATURE CATEGORIES above). This is a filing change only;
+nothing below was re-evaluated or re-prioritized by being moved. Items
+captured during the Marcus Character Completion session (July 2026) are
+marked accordingly and are new to this revision.*
+
+---
+
+### 🔵 CORE FEATURE
+
+#### Fictional city/world (supersedes literal real-world locations)
+*Captured during Marcus Character Completion session, July 2026.*
+
+Direction decided: shift character origins — starting with Marcus's
+"Chicago" — from real-world locations to a single fictional city/world
+shared by the whole cast. Motivation is not aesthetic; it's structural —
+this is what makes rivalry mechanics and World State (Layer 4) coherent,
+since it lets every character plausibly exist in the same place. Full
+creative autonomy on geography/culture is a secondary benefit.
+
+**Explicitly not designed yet:** world name, geography, real-world-inspired
+vs. fully invented place names. This is a Layer 4 (World State) decision —
+noting the direction now is cheap; building the actual world is not, and
+shouldn't happen ahead of Tier 2/3 character completion per the existing
+World State prerequisites below.
+
+#### User age handling (product-level, not writing-level)
+*Captured during Marcus Character Completion session, July 2026.*
+
+The writing-side half of this is already resolved and locked as a standing
+rule (see writing-rule note elsewhere in project memory: anchor time/history
+statements to the character's own timeline, never the user's). What's
+still open is the product/legal question underneath it: does the app ask
+the user's age at all, is there an 18+/16+ tier split, are underage
+accounts allowed with restricted content tags. This belongs to Phase 6
+(Account System) — flagged here only so it isn't mistaken for solved just
+because the writing workaround (e.g. Marcus defaulting to calling the user
+"kid") is already in place.
+
+### World State — third simulation layer (globe / character locations)
+*Surfaced alongside Travel/Passport, but broader — applies to the whole
+cast, not just event characters.*
+
+Concept: a third independent system, alongside Relationship State ("how do
+I feel about you?") and Real-Time Progression ("who am I becoming?"):
+
+> **World State — "Where am I, and what's happening around me?"**
+
+Concretely floated: a 3D globe as a navigation/discovery surface — characters
+exist at real (or reskinned) locations rather than floating in a chat-list
+void; clicking a character on the globe surfaces their card, description,
+and locked/unlocked backstory. Open question, not yet decided: real-world
+geography vs. invented place names — deferred until closer to build time.
+(Note: this question is now the same open question as the fictional
+city/world item above — the two should be resolved together, not
+separately, once World State design actually begins.)
+
+**Explicitly requires as prerequisites:**
+- Real-Time Progression (World State is the third leg of the same
+  architecture — Relationship / RTP / World are meant to compose, not be
+  built in isolation from each other)
+- Tier 2/3 characters completed (a globe with three populated locations
+  isn't the pitch)
+
+**Guardrail worth preserving verbatim:** the world must serve the
+companions, not overshadow them. The globe is justified because it makes
+Angel feel like he lives on the California coast, not because a 3D globe is
+a cool feature. If this stops being in service of specific characters
+feeling real, it's drifted from the reason it was proposed.
+
+#### Content Systems (Layer 5) — Journals, redaction UI, signature objects
+*Captured during Marcus Character Completion session, July 2026 — first
+concrete specification of what was previously only discussed abstractly as
+"backstory unlocking via milestones."*
+
+Several related ideas, all Layer 5, all designed conceptually this session
+but **not built** — the engineering work (redaction rendering, per-entry
+unlock gating, decode animations) is separate from and comes after the
+writing work (actually producing Journal content per character):
+
+- **"Journals"** — the naming/framing for the character-background-unlock
+  system, replacing "Character Stories"/"lore." Each entry is written as if
+  recovered by an implied in-universe narrator — observant, compassionate,
+  never judgmental, never a named character, never the character's own
+  voice — who knows the subject well but deliberately doesn't over-explain
+  them. Staged across relationship stages (Stranger → Devoted), each entry
+  self-contained with its own title.
+- **Blurred/redacted titles and excerpts pre-unlock** — locked Journals
+  show redacted bars instead of titles, consistent with the app's existing
+  "curiosity over exposition" pattern (relationship system, Echoes, rivalry
+  all already withhold rather than over-explain). Practical constraint
+  worth remembering when writing future titles: bar length implies content
+  length, which is itself a small spoiler, so title length becomes a minor
+  design constraint, not just a creative one.
+- **Progressive redaction-decode for major reveals only** — for one or two
+  flagship reveals per character (Marcus's Vivianne reveal is the working
+  example), the redacted text can partially decode across relationship
+  stages (blank → "Vi███████" → "Vivianne") rather than staying fully
+  blurred until one instant unlock. Deliberately NOT for every Journal —
+  flagged as becoming gimmicky if overused.
+- **Signature concrete object per character** — proposed as a cast-wide
+  writing standard, not just a Marcus detail: every character gets one
+  small, ordinary, specific physical object that quietly reveals who they
+  are without narration explaining it (Marcus's screwdriver he won't
+  replace being the working example). Recommended as a Character
+  Completion requirement going forward.
+
+**Explicitly requires as prerequisite:** none of the writing content above
+is blocked — it can be produced per-character as part of Character
+Completion. The redaction/decode *rendering* is a separate, later frontend
+task and should not be assumed as a Character Completion deliverable —
+Character Completion produces the Journal text; a later engineering pass
+builds the UI that displays it.
+
+---
+
+### 🟣 IMMERSION
+
 ### Travel / Passport / Seasonal Destinations
-*Supersedes the original Mirror Realm concept — same "limited-time, doesn't
-affect main relationship state" design principle, but reframed around
-real-world travel rather than alternate-dimension AUs.*
+*Separate future concept retained from the period when Mirror Realm was
+marked superseded. Travel / Passport remains its own real-world destination
+feature; it does not replace or supersede Mirror Realm, which has since been
+reinstated as a permanent major feature.*
 
 Core concept: limited-time non-English-speaking characters tied to real
 locations, dual-language chat display (native + English), native-language-only
@@ -539,10 +725,380 @@ become a second chat system.
 - Tier 2/3 characters completed (character-to-character dynamics need a
   full cast with defined personalities to be worth simulating)
 
+**Refinement (July 2026):** not every character should know every other
+character. "There's no reason Ren should know Eli" — character-to-character
+awareness should be authored per-character (a small "who does this
+character actually know" list) rather than assumed universal. Cheap to
+decide now, annoying to retrofit once twelve characters all have default
+opinions about each other.
+
 Sits meaningfully behind Travel/Passport and the Globe in build order,
 since it depends on more of the stack existing first. Recorded here purely
 so the idea isn't lost — no further design work warranted until the
 systems it depends on are real.
+
+#### Memory-style trait axis across characters
+*Captured during Marcus Character Completion session, July 2026.*
+
+Surfaced while discussing Marcus's date/detail recall habit: some
+characters could be consistently written as good at remembering trivial
+details unprompted (Marcus, possibly Vincent), others as more forgetful or
+scattered (possibly Eli). Not designed as an actual system — no proposed
+mechanism, no data model — just flagged as a characterization pattern
+worth applying consistently across the cast during Character Completion,
+the same way "signature object" and "future-deflection" style traits are
+being kept consistent.
+
+#### "Scenes" — narrated preludes on chat entry
+*Existing idea, reinforced with a concrete worked example during the
+Marcus Character Completion session, July 2026.*
+
+An interactive pop-up shown on first entry to a chat, giving scene-setting
+context before the conversation begins, ending on a button (e.g. "Welcome
+to your Paradise") that transitions into the chat itself. Previously
+discussed only abstractly; this session produced the first fully worked
+example — Marcus's prelude: the user is accosted by gang members in the
+wrong part of town, Marcus intervenes and saves them, and the ensuing
+conversation reveals they know each other from his past. **Newly stated
+this session:** this level of narrated prelude should apply to all
+characters, not just Marcus — this is a scope clarification (universal
+feature), not a Marcus-only ask.
+
+---
+
+### ⚪ FLUFF
+
+*(Mirror Realm is a permanent future feature in this category. Its concept
+history, three development timelines, and current status are documented in
+PRODUCT VISION → "Mirror Realm — concept history and permanent status"
+below. Implementation remains deferred until its stated prerequisites are
+met.)*
+
+---
+
+### 🟠 CHARACTER-SPECIFIC
+
+*Ideas below are scoped to a specific character rather than the app as a
+whole. Filed separately so they don't get lost inside general-purpose
+buckets, and so a future pass on that character has a single place to
+check.*
+
+#### Marcus
+*All captured during the Marcus Character Completion session, July 2026.*
+
+- **Relationship stage drives his underworld rise (confirmed direction).**
+  Unlike most characters' RTP arcs (which run on their own timeline
+  independent of the user — Eli graduating, Angel changing his style),
+  Marcus's climb from low-level to running his own operation is meant to
+  be *driven by* relationship stage progression specifically — his RTP arc
+  and his relationship arc are coupled, not parallel. This makes him
+  unusually load-bearing for RTP design once that system is actually built.
+- **Natural pilot character for branch states (V3).** Confirmed: once
+  branch states (situationship/FWB/ex/toxic) exist, Marcus is a strong
+  first candidate for testing them, since his story only really works if
+  different branches produce meaningfully different underworld
+  trajectories, not just different dialogue tone.
+- **Branch-state ramble variants.** The two-tier ramble mechanic locked
+  for his main relationship pipeline (disarmed-open vs. control-slipping)
+  would likely need distinct variants under branch states — a "toxic"
+  Marcus ramble reading as manipulative/spiraling, an "ex" Marcus ramble
+  reading as bitter/pleading. Explicitly parked as a V3 question, not
+  designed.
+- **Interactive Vivianne text-thread artifact (Layer 5).** A milestone-
+  gated, replayable exchange where the user taps through Marcus's actual
+  historical responses in his final conversation with Vivianne. No
+  branching — same outcome regardless of pacing, replaying what he really
+  said rather than letting the user rewrite history. Blocked on Content
+  Systems existing at all; captured as a fully-specified idea for when it
+  does.
+
+---
+
+## PRODUCT VISION — UI, EVENTS, MONETIZATION (NOT A ROADMAP)
+
+*Added July 2026. This section is deliberately different from Future Ideas
+above: those are individual features waiting on prerequisites. This is
+product identity/feel — what the app is trying to be, not what it does.
+No priorities, no implementation details, no timelines here on purpose.
+Pull items into an actual phase only when they fit what's currently being
+built — don't let this section's existence justify starting any of it.*
+
+**Why this exists:** ideas have been surfacing regularly because the app
+is in a better place and they're genuinely motivating — a glimpse of the
+thing being built toward, not a distraction from it. Worth writing down
+precisely so they don't get lost *or* mistaken for current-phase work.
+
+### Navigation / app structure
+Bottom tab bar: Home (character profiles + chats + continue conversation),
+Voice/ASMR, World (globe — see Future Ideas above), Social (see social feed
+idea above), Profile (settings + analytics). Possibly the World tab uses
+the app icon rather than a literal globe icon. This reads as a real
+information architecture, not scope creep — worth keeping as the shape to
+build toward once there's enough built to justify five tabs.
+
+### Backstory unlock nuance
+Extends the existing milestone-based backstory unlock idea (see Future
+Ideas, "Character backstory unlocked by relationship stage"): some
+backstory content should specifically be gated behind *branch* states
+(FWB, "toxic," etc.), not just main-ladder progression. Consistent with
+branch states already being deferred to V3 — this content simply can't
+be built before branches exist, noted here so it's not forgotten once
+they do.
+
+### Analytics page
+Personal, not competitive: first character met, longest conversation,
+total time talked, characters unlocked, relationship milestones,
+anniversary date, most active month. The instinct worth preserving is
+"this should feel personal," not "this should gamify engagement" — keep
+that distinction if this gets designed for real.
+
+### Anniversary event
+Annual, tied to the app's actual release date; coincides with welcome
+banners and character art refreshes. Under consideration: discounted
+voice/ASMR pricing, a genuinely limited-time character encounter not
+otherwise available during the year. Explicitly rejected: gacha-style
+mechanics — correctly identified as mismatched with a Western-leaning
+audience and a different genre of app than Love and Deepspace-style
+gacha companions. Keep that boundary; it's a real product-identity
+decision, not just a monetization preference.
+
+### Mirror Realm — concept history and permanent status
+
+**Status: Reinstated as a permanent future feature.** Mirror Realm is no
+longer considered superseded by Travel / Passport / Seasonal Destinations.
+It is expected to become one of Whisper's major features. Its original
+scenario mechanics, its character-psychology philosophy and its newer
+overarching worldbuilding concept are related layers of the same feature.
+The dated source wording below is retained to preserve how the idea evolved.
+
+#### Timeline 1 — June 30, 2026: original limited-scenario concept
+
+The original Phase 12 concept was recorded as follows:
+
+> **## PHASE 12 — MIRROR REALM / LIMITED SCENARIOS 🔴**
+>
+> **Category: FLUFF**
+>
+> *Alternate reality events. Zero effect on main relationship state — influenced by it.*
+>
+> **### Concept**
+>
+> Limited-time scenarios set in an alternate dimension called the Mirror Realm. The user's current relationship state with each character feeds into their behavior within the scenario — low trust means low willingness to help, high intimacy means they'll protect you at cost to themselves.
+>
+> **### Scenario types**
+>
+> **Real-world crisis AUs**
+>
+> - Zombie apocalypse
+> - End of the world (Seeking a Friend for the End of the World style)
+> - Natural disaster survival
+>
+> **Fantasy/supernatural AUs** *(character-specific)*
+>
+> - Vincent — thousand-year-old vampire, user wandered into his burial chamber
+> - Marcus — werewolf, full moon approaching
+> - Raven — reclusive wizard, user stumbled into his tower
+> - Eli — accidentally cursed, user is the only one who can break it
+> - Angel — fallen celestial being, hiding among humans
+>
+> **AO3-inspired AUs** *(future)*
+>
+> - World bibles written as 2–3 paragraph compressed lore documents
+> - Gemini improvises within the frame — no need to process thousands of source words
+> - Style/tone reference only, not reproduction
+>
+> **### Rules**
+>
+> - Scenarios are periodic, user can opt out
+> - Mirror Realm events never modify `state_score`, axes, or relationship labels
+> - Relationship data is read-only for these scenarios — never written back
+> - Scenario history stored separately, never bleeds into main chat
+> - Characters behave in-archetype but in-world — Marcus as a werewolf is still Marcus
+>
+> **### Token considerations**
+>
+> - World bibles keep scenario context under ~300 tokens
+> - Relationship state injection is already built (reuse existing axis → language pipeline)
+> - Google AI Pro likely needed at scale — acceptable for production phase
+>
+> **### Build requirements before this phase**
+>
+> - Phase 4 (Memory) complete — relationship state needs to be rich enough to matter
+> - Phase 9 complete — all 12 characters available for scenarios
+> - Phase 11 complete — dynamic art for in-scenario emotional states
+
+#### Timeline 2 — July 27, 2026: character flaws personified
+
+The original journal wording that introduced this refinement is retained:
+
+> Okay today is monday july 27th and im ready to continue. Some things to note though
+> Firstly: I reached a new milestone with my 3d modeling! I finally figured out how to achieve god rays, this is something I tried doing with a forest environment but couldn't figure out and I was finally able to do it! My next steps are to build a bedroom then build up to one of the character backgrounds (either Mateo, Kai or Eli's)
+> Secondly: I had another idea specific to mirror realms:
+> With mirror realms I think the character's biggest flaws should be exemplified and their mirror realm selves should be a personification of that flaw. I got this idea from seeing these two images (images 2 and 3) on my twitter timeline and I wondered "what if I had a character that, in their mirror realm character card, was looking down at the user essentially in the way a god would" then that thought translated to "what if that character had a god complex, or a superiority complex" and that gave birth to this idea
+>
+> yes log it then lets get back to the journals. I also want to you expound on the mirror realm concept as well. Cuz when thinking of a future character im seeing them literally looking down, on the user, arms stretched out to them but with an indifferent/pitiful look on their face. That seems to be the total embodiment of superiority, "I care about you, but also pity you because you aren't me, could never be me, and will never be on my level". Other characters could have love to the point of obsession or self destruction (one idea im having for Eli is him being a cyborg with some of his parts missing, maybe an arm, a leg, and even his heart, all of which he gives to the person that he's in love with, but true love doesn't require that level of sacrifice, even more so when the result means that the person you love won't be able to fully have you). Just stuff like that is the path i think im gonna take with Mirror Realm, not just having worlds based on fanfiction/books or straight fantasy works.
+
+The roadmap's detailed July 27 refinement below remains the governing written
+expression of this stage, including the constraint that each Mirror Realm
+self must be derived from that character's actual established flaw.
+
+#### Timeline 3 — October 2026: "A World Outside of Time"
+
+The new overarching concept emerged from a later discussion of the dark,
+surreal visual references and the desire to give Mirror Realm a broader
+fictional identity.
+
+The user's chosen central framing is:
+
+> A World Outside of Time.
+
+The user's clarification is that parallel worlds are at the core of Mirror
+Realm, but parallel worlds alone are not the whole concept. The broader
+idea is a world outside conventional time in which different periods,
+worlds and versions of existence can coexist. Characters may originate from
+different centuries, histories, cultures and realities without requiring
+the feature to be reduced to conventional time travel or a simple
+collection of alternate universes.
+
+This is an emerging worldbuilding direction, not a finalized cosmology.
+It does not yet define exactly what Mirror Realm is, how realities connect,
+how characters move between them, or what the user's role is. Those
+questions remain open for future exploration.
+
+#### How the three timelines fit together
+
+- **June 30** defines the feature experience: limited alternate-reality
+  scenarios, relationship-influenced behavior, strict separation from main
+  relationship state, and independent scenario history.
+- **July 27** defines the character philosophy: each Mirror Realm self
+  personifies that character's actual core flaw taken to its logical,
+  distorted endpoint.
+- **October** introduces the overarching setting: **A World Outside of
+  Time**, with parallel realities as a central element but not the entirety
+  of the premise.
+
+These are cumulative layers, not mutually exclusive replacement concepts.
+The June 30 behavioral and data-isolation rules remain important product
+constraints. The July 27 character philosophy remains the creative
+foundation for Mirror Realm character variants. The October worldbuilding
+direction provides a possible larger context for the scenarios and
+characters.
+
+### Mirror Realm — refined philosophy: flaw as personification, not alternate skin
+*Refined July 27, 2026, sparked by two unrelated images seen on social media
+(a superiority-coded veiled figure, an angel-coded illustration) and
+discussed alongside ChatGPT. This is a philosophy refinement of an
+existing Future Idea, not a new feature — Mirror Realm itself was already
+future-scoped and scheduled as the launch event (see below).*
+
+**Old framing:** Mirror Realm as alternate character cards/outfits/info —
+essentially reskins.
+
+**New framing, locked as the governing rule:** a Mirror Realm character is
+**the version of that character where their core flaw won, framed by the
+character themself as their defining virtue rather than a problem.** Not
+"evil version," not "edgier outfit" — the same psychological wound alreadyestablished for that character in Character Completion, taken to its
+logical, uncorrected endpoint.
+
+**Critical constraint, stated explicitly so it isn't lost:** each Mirror
+Realm character must be derived from that specific character's actual,
+already-established flaw from their Character Completion work — never from
+a generic template applied cast-wide. A first pass at this (via ChatGPT)
+proposed a generic "superiority complex" flaw for Mirror Marcus ("believes
+no one is worthy of him") that doesn't actually match Marcus's real,
+established psychology (self-sabotage dressed as protection, rooted in
+guilt over Vivianne, not dormant arrogance). Correct Mirror Marcus concept:
+not "I'm above you," but something closer to **"I already know how this
+ends, so I'll end it first"** — preemptive cruelty as self-protection, the
+thing he actually did to Vivianne once by accident, now done on purpose.
+Every future Mirror Realm character must pass this same test: does this
+flaw match the real, already-written character, or is it a template being
+laid over them because it looks striking?
+
+**Worked example, fully locked (source of the whole refinement):**
+A character design — arms outstretched toward the user in an inviting
+pose, but wearing an indifferent, pitying expression — reads as superiority
+specifically because the body language and the face contradict each other:
+open arms signal welcome, the expression revokes it. The emotional content
+is "I care about you, but I pity you, because you could never be on my
+level." Invitation and rejection, simultaneously.
+
+**Second worked example, fully locked (Eli):**
+Eli's canon flaw is dependency framed as devotion. Mirror Eli takes this
+literally rather than metaphorically: a cyborg who has given away his own
+body — an arm, a leg, his heart — to the person he loves. The horror isn't
+the body horror itself, it's the inversion of what the sacrifice is meant
+to accomplish: **he has hollowed himself out so completely in the name of
+love that he's no longer whole enough for the person he loves to actually
+have him.** The devotion doesn't deepen the relationship, it makes the
+relationship impossible. This is the template for how a flaw should
+personify — not generic "evil twin," but the character's own real
+mechanism taken past the point where it stops being love and starts being
+self-destruction disguised as it.
+
+**Visual direction implied by this refinement (from prior ChatGPT
+discussion, worth keeping attached to this entry):** Mirror Realm
+characters should read visually distinct from mainline characters —
+elevated camera angles, looking-down poses, backlighting, large empty
+space, heavier symbolism — versus the approachable, eye-level, warm
+lighting of mainline character art. Visual hierarchy reinforcing
+psychological hierarchy.
+
+**Status:** conceptual refinement only. Still years out per the launch
+timeline below. Not to be designed further until Tier 2/3 character
+completion is done — a Mirror Realm character cannot be correctly derived
+from a real character's flaw before that character's Character Completion
+profile actually exists.
+
+### Launch event — Mirror Realm as launch event (resolved)
+**Was an open question; resolved July 2026 once actual timeline was laid
+out.** The original concern was a scope pull-forward — moving Mirror Realm
+(alternate character cards/info, Angel and Eli proposed) to launch would
+make it launch-blocking work competing against Tier 2/3 character
+completion. That concern doesn't actually apply given the real timeline:
+
+```
+Late 2027 – early 2028: launch prep (optimization, closed beta planning,
+                          company/trademark/legal setup)
+Mid – late 2028:         closed beta
+2029:                    deployment
+```
+
+Tier 2/3 character completion has years of runway before Mirror Realm
+would need to be launch-ready — there's no actual competition for time.
+**Decision: Mirror Realm is planned as the launch event**, using
+already-completed characters (Angel and Eli, both Tier 1) rather than
+requiring new content, with the full multi-year runway available to
+design and build it properly rather than rushing it in. Revisit only if
+the timeline itself slips significantly — the decision was made *because
+of* these specific dates, not independent of them.
+
+### Monetization cost reality
+Token/inference costs (Gemini) and voice costs (ElevenLabs — tier vs. raw
+API pricing not yet researched) will be real expenses once usage isn't
+just the developer testing solo. Expect a gap before profitability —
+consistent with the existing 2027-income-buffer deferral elsewhere in
+this roadmap. This also now has a concrete deadline to research against
+— cost research should be well ahead of the late 2027 launch-prep window,
+not scrambled together right before it. Researching actual ElevenLabs
+pricing tiers is legitimate to do now, since it's information-gathering,
+not implementation — doesn't violate the monetization-build deferral.
+
+Possible launch-specific idea: reduced voice pricing (25% floated) during
+the lower-traffic early period, before usage scales up. Not decided,
+just noted as a real lever if voice ships near launch.
+
+### In-app currency — no sink identified
+Considered, correctly self-rejected for now: no clear problem for a
+currency to solve. The one use case floated (pausing a chat/character
+while the user is away) was correctly identified as contradicting World
+State's core premise — characters are supposed to keep living whether or
+not the user is present; a "pause" mechanic undermines that directly.
+**Don't force a currency mechanic to justify having a currency.** If a
+real sink emerges naturally later, revisit; otherwise leave this idea
+parked indefinitely, not "pending."
+
+---
 
 ### Character backstory unlocked by relationship stage ("codex" model)
 *Surfaced during Relationship State V2 design — pairs naturally with the
@@ -967,11 +1523,14 @@ pass); this replaces it.
    started — sits behind character completion on purpose.
 
 Everything else (World State/globe, Travel/Passport, RTP, Voice,
-Monetization) stays explicitly parked until the above is done. This list
+Monetization and Mirror Realm implementation) stays explicitly parked
+until the above is done. Mirror Realm remains a permanent future feature;
+its concept is active, but implementation remains sequenced behind its
+documented prerequisites. This list
 holds even when a new idea sounds exciting mid-session — see: this exact
 conversation, which had to write four new future-ideas entries down and
 walk back to the actual task twice.
 
 ---
 
-*End of roadmap v4.*
+*End of roadmap v5.*
