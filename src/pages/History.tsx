@@ -54,14 +54,18 @@ const History = () => {
         ) : (
           sessions.map((s, i) => {
             const char = getCharacter(s.character_id);
-            const cat = getASMRCategory(s.asmr_type as ASMRType);
+            const isCharacterMode = s.asmr_type === "__character__";
+            const cat = isCharacterMode ? undefined : getASMRCategory(s.asmr_type as ASMRType);
+            const targetPath = isCharacterMode
+              ? `/chat/${s.character_id}`
+              : `/chat/${s.character_id}/${s.asmr_type}`;
             return (
               <motion.button
                 key={s.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => navigate(`/chat/${s.character_id}/${s.asmr_type}`)}
+                onClick={() => navigate(targetPath)}
                 className="w-full glass rounded-xl p-4 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
               >
                 <span className="text-2xl">{char?.emoji ?? "🎧"}</span>
@@ -70,7 +74,7 @@ const History = () => {
                     {char?.name ?? s.character_id}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {cat?.emoji} {cat?.label ?? s.asmr_type}
+                    {isCharacterMode ? "💬 Whisper Corner" : `${cat?.emoji ?? ""} ${cat?.label ?? s.asmr_type}`.trim()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
