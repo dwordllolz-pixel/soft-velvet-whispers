@@ -138,7 +138,54 @@ Mitigation: add "no camera drift, fixed frame throughout" explicitly.
 
 Already added to Visual Behavior Bible.
 
+## FLUFF / Low priority
+
+**[FLUFF] CSS @import ordering warning**
+
+Vite reports that the Google Fonts `@import` appears after Tailwind
+directives in the application stylesheet.
+
+The production build succeeds. No fix needed for repo-prep.
+
+Priority: Low.
+
+**[FLUFF] Large production JavaScript bundle**
+
+Vite reports a minified JavaScript chunk of approximately 976 KB,
+above its 500 KB warning threshold.
+
+The production build succeeds. Consider bundle analysis and code
+splitting during a future performance pass.
+
+Priority: Low.
+
 ## Deferred (intentional, not bugs)
+
+**[DEFERRED] Existing ESLint baseline**
+
+`npm run lint` currently reports 29 errors and 11 warnings across
+the existing codebase.
+
+Not addressed during repo-prep. Track as a separate lint cleanup task.
+
+Priority: Medium.
+
+**[DEFERRED] Remaining dependency security advisories**
+
+After compatible `npm audit fix` updates, 10 audit findings remain:
+3 in production dependencies and 7 in development dependencies.
+
+Production findings involve React Router (moderate) and Zod (high).
+Development findings involve Vitest/Tinypool, Vite/esbuild, and
+PostCSS selector parsing.
+
+The remaining fixes proposed by npm require breaking or major-version
+dependency changes. Do not use `npm audit fix --force` as a blanket
+remediation. Review each dependency and its actual use before planning
+an upgrade. High severity describes the Zod advisory, not an instruction
+to upgrade immediately.
+
+Priority: Separate security review; remediation timing to be planned.
 
 **[DEFERRED] React Router future flag warnings**
 
