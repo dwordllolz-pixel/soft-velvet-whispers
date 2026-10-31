@@ -265,7 +265,9 @@ const CHAT_URL = `${supabaseEnv.url}/functions/v1/chat`;
 const TIER_CYCLE: NsfwLevel[] = ["sfw", "suggestive", "explicit"];
 
 const Chat = () => {
-  const { characterId, asmrType } = useParams<{ characterId: string; asmrType?: string }>();
+  const { characterId, asmrType: rawAsmrType } = useParams<{ characterId: string; asmrType?: string }>();
+  const effectiveAsmrType = rawAsmrType && rawAsmrType !== "__character__" ? rawAsmrType : undefined;
+  const asmrType = effectiveAsmrType;
   const navigate = useNavigate();
   const character = getCharacter(characterId || "");
   const category = asmrType ? getASMRCategory(asmrType as ASMRType) : null;
